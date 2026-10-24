@@ -31,6 +31,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (!langMenuOpen) return;
+    const handleClose = () => setLangMenuOpen(false);
+    window.addEventListener('click', handleClose);
+    return () => window.removeEventListener('click', handleClose);
+  }, [langMenuOpen]);
+
   const currentLangObj = LANGUAGES.find((l) => l.code === currentLang) || LANGUAGES[0];
 
   return (
@@ -107,7 +114,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Language Selector Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLangMenuOpen(!langMenuOpen);
+              }}
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border border-slate-200"
               title="Select Language / Cambiar Idioma / Changer de Langue / 选择语言"
             >

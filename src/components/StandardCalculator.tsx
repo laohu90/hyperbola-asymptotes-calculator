@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FocalAxis, HyperbolaStandardState } from '../types/conic';
-import { calculateHyperbolaProperties, formatFraction } from '../utils/mathUtils';
+import { calculateHyperbolaProperties, formatFraction, formatBracketTerm } from '../utils/mathUtils';
 import { MathView } from './MathView';
 import { Sliders, Calculator, Zap, Copy, Check } from 'lucide-react';
 import { Language, TranslationDictionary } from '../i18n/translations';
@@ -306,10 +306,10 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="text-lg sm:text-xl font-mono text-center py-1.5">
                 {axis === 'x' ? (
                   <MathView
-                    formula={`\\frac{${h === 0 ? 'x²' : `(x - ${h})²`}}{${formatFraction(
+                    formula={`\\frac{${formatBracketTerm('x', h)}²}{${formatFraction(
                       a * a,
                       1
-                    )}} - \\frac{${k === 0 ? 'y²' : `(y - ${k})²`}}{${formatFraction(
+                    )}} - \\frac{${formatBracketTerm('y', k)}²}{${formatFraction(
                       b * b,
                       1
                     )}} = 1`}
@@ -317,10 +317,10 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                   />
                 ) : (
                   <MathView
-                    formula={`\\frac{${k === 0 ? 'y²' : `(y - ${k})²`}}{${formatFraction(
+                    formula={`\\frac{${formatBracketTerm('y', k)}²}{${formatFraction(
                       a * a,
                       1
-                    )}} - \\frac{${h === 0 ? 'x²' : `(x - ${h})²`}}{${formatFraction(
+                    )}} - \\frac{${formatBracketTerm('x', h)}²}{${formatFraction(
                       b * b,
                       1
                     )}} = 1`}

@@ -127,14 +127,12 @@ export function calculateHyperbolaProperties(state: HyperbolaStandardState): Hyp
     asymptoteSlopes = [slope, -slope];
 
     const slopeStr = formatFraction(safeB, safeA);
-    if (h === 0 && k === 0) {
-      asymptoteEquations = [`y = ${slopeStr}x`, `y = -${slopeStr}x`];
-    } else {
-      asymptoteEquations = [
-        `y - (${k}) = ${slopeStr}(x - (${h}))`,
-        `y - (${k}) = -${slopeStr}(x - (${h}))`,
-      ];
-    }
+    const yTerm = formatBracketTerm('y', k);
+    const xTerm = formatBracketTerm('x', h);
+    asymptoteEquations = [
+      `${yTerm} = ${slopeStr}${xTerm === 'x' ? 'x' : xTerm}`,
+      `${yTerm} = -${slopeStr}${xTerm === 'x' ? 'x' : xTerm}`,
+    ];
   } else {
     vertices = [
       { x: h, y: k - safeA },
@@ -148,14 +146,12 @@ export function calculateHyperbolaProperties(state: HyperbolaStandardState): Hyp
     asymptoteSlopes = [slope, -slope];
 
     const slopeStr = formatFraction(safeA, safeB);
-    if (h === 0 && k === 0) {
-      asymptoteEquations = [`y = ${slopeStr}x`, `y = -${slopeStr}x`];
-    } else {
-      asymptoteEquations = [
-        `y - (${k}) = ${slopeStr}(x - (${h}))`,
-        `y - (${k}) = -${slopeStr}(x - (${h}))`,
-      ];
-    }
+    const yTerm = formatBracketTerm('y', k);
+    const xTerm = formatBracketTerm('x', h);
+    asymptoteEquations = [
+      `${yTerm} = ${slopeStr}${xTerm === 'x' ? 'x' : xTerm}`,
+      `${yTerm} = -${slopeStr}${xTerm === 'x' ? 'x' : xTerm}`,
+    ];
   }
 
   // Angle between asymptotes: 2 * arctan(slope of asymptote relative to transverse axis)
@@ -560,24 +556,34 @@ export function generateExamPaperAnswer(
   const hStr = p.h === 0 ? 'x' : `(x ${p.h > 0 ? '- ' + p.h : '+ ' + Math.abs(p.h)})`;
   const kStr = p.k === 0 ? 'y' : `(y ${p.k > 0 ? '- ' + p.k : '+ ' + Math.abs(p.k)})`;
 
+  const xGroupStr = coeffs.D !== 0
+    ? `${coeffs.A}(x² ${coeffs.D / coeffs.A >= 0 ? '+ ' : '- '}${Math.abs(coeffs.D / coeffs.A)}x)`
+    : `${coeffs.A}x²`;
+  const yGroupStr = coeffs.E !== 0
+    ? `${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}(y² ${coeffs.E / coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.E / coeffs.C)}y)`
+    : `${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}y²`;
+
+  const rhsTotal = isX ? p.a * p.a * Math.abs(coeffs.A) : p.a * p.a * Math.abs(coeffs.C);
+  const rhsStr = rhsTotal.toFixed(1).replace(/\.0$/, '');
+
   if (lang === 'zh') {
     return `【高考数学解析几何 · 规范答题卡书写示范】
 题目：化简双曲线方程，求其中心、焦点坐标、离心率及渐近线方程。
 
 解：
 一、【配方法化简 (踩分点 4分)】
-原方程为：${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D >= 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)}x ${coeffs.E >= 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)}y ${coeffs.F >= 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)} = 0
-移项分组得：${coeffs.A}(x² ${coeffs.D/coeffs.A >= 0 ? '+ ' : '- '}${Math.abs(coeffs.D/coeffs.A)}x) ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}(y² ${coeffs.E/coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.E/coeffs.C)}y) = ${-coeffs.F}
-两边配方整理得：${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${(p.a*p.a*Math.abs(coeffs.A)).toFixed(1).replace(/\.0$/, '')}
+原方程为：${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D !== 0 ? (coeffs.D > 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)) + 'x ' : ''}${coeffs.E !== 0 ? (coeffs.E > 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)) + 'y ' : ''}${coeffs.F !== 0 ? (coeffs.F > 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)) : ''} = 0
+移项分组得：${xGroupStr} ${yGroupStr} = ${-coeffs.F}
+两边配方整理得：${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${rhsStr}
 两边同除常数项，化为双曲线标准方程：
-${isX ? `${hStr}² / ${(p.a*p.a).toFixed(2)} - ${kStr}² / ${(p.b*p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a*p.a).toFixed(2)} - ${hStr}² / ${(p.b*p.b).toFixed(2)} = 1`}
+${isX ? `${hStr}² / ${(p.a * p.a).toFixed(2)} - ${kStr}² / ${(p.b * p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a * p.a).toFixed(2)} - ${hStr}² / ${(p.b * p.b).toFixed(2)} = 1`}
 
 二、【几何特征量求解 (踩分点 3分)】
 由标准方程可知：
 中心坐标为 (${p.h}, ${p.k})；
 焦点所在轴：${isX ? '焦点在与 x 轴平行的直线 y = ' + p.k + ' 上' : '焦点在与 y 轴平行的直线 x = ' + p.h + ' 上'}；
 实半轴 a = ${p.a.toFixed(2)}，虚半轴 b = ${p.b.toFixed(2)}；
-半焦距 c = √(a² + b²) = √(${(p.a*p.a).toFixed(2)} + ${(p.b*p.b).toFixed(2)}) = ${p.c.toFixed(2)}。
+半焦距 c = √(a² + b²) = √(${(p.a * p.a).toFixed(2)} + ${(p.b * p.b).toFixed(2)}) = ${p.c.toFixed(2)}。
 焦点坐标为：F₁(${p.foci[0].x.toFixed(1)}, ${p.foci[0].y.toFixed(1)})，F₂(${p.foci[1].x.toFixed(1)}, ${p.foci[1].y.toFixed(1)})。
 
 三、【离心率与渐近线结论 (踩分点 3分)】
@@ -593,11 +599,11 @@ Problema: Reducir la ecuación a su forma canónica y hallar centro, focos, exce
 
 Solución:
 I. [Completar el Cuadrado - 4 Puntos]
-Ecuación inicial: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D >= 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)}x ${coeffs.E >= 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)}y ${coeffs.F >= 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)} = 0
-Agrupando y factorizando: ${coeffs.A}(x² ${coeffs.D/coeffs.A >= 0 ? '+ ' : '- '}${Math.abs(coeffs.D/coeffs.A)}x) ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}(y² ${coeffs.E/coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.E/coeffs.C)}y) = ${-coeffs.F}
-Completando cuadrados: ${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${(p.a*p.a*Math.abs(coeffs.A)).toFixed(1).replace(/\.0$/, '')}
+Ecuación inicial: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D !== 0 ? (coeffs.D > 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)) + 'x ' : ''}${coeffs.E !== 0 ? (coeffs.E > 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)) + 'y ' : ''}${coeffs.F !== 0 ? (coeffs.F > 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)) : ''} = 0
+Agrupando y factorizando: ${xGroupStr} ${yGroupStr} = ${-coeffs.F}
+Completando cuadrados: ${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${rhsStr}
 Forma Canónica Estándar:
-${isX ? `${hStr}² / ${(p.a*p.a).toFixed(2)} - ${kStr}² / ${(p.b*p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a*p.a).toFixed(2)} - ${hStr}² / ${(p.b*p.b).toFixed(2)} = 1`}
+${isX ? `${hStr}² / ${(p.a * p.a).toFixed(2)} - ${kStr}² / ${(p.b * p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a * p.a).toFixed(2)} - ${hStr}² / ${(p.b * p.b).toFixed(2)} = 1`}
 
 II. [Parámetros Geométricos - 3 Puntos]
 Centro C(${p.h}, ${p.k});
@@ -617,9 +623,9 @@ Problème : Mettre l'équation sous forme réduite et déterminer centre, foyers
 
 Solution :
 I. [Complétion du Carré - 4 Points]
-Équation initiale : ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D >= 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)}x ${coeffs.E >= 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)}y ${coeffs.F >= 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)} = 0
+Équation initiale : ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D !== 0 ? (coeffs.D > 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)) + 'x ' : ''}${coeffs.E !== 0 ? (coeffs.E > 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)) + 'y ' : ''}${coeffs.F !== 0 ? (coeffs.F > 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)) : ''} = 0
 Forme réduite canonique :
-${isX ? `${hStr}² / ${(p.a*p.a).toFixed(2)} - ${kStr}² / ${(p.b*p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a*p.a).toFixed(2)} - ${hStr}² / ${(p.b*p.b).toFixed(2)} = 1`}
+${isX ? `${hStr}² / ${(p.a * p.a).toFixed(2)} - ${kStr}² / ${(p.b * p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a * p.a).toFixed(2)} - ${hStr}² / ${(p.b * p.b).toFixed(2)} = 1`}
 
 II. [Grandeurs Géométriques - 3 Points]
 Centre C(${p.h}, ${p.k});
@@ -639,9 +645,9 @@ Problema: Reduzir a equação à forma canônica e determinar centro, focos, exc
 
 Solução:
 I. [Completamento de Quadrados - 4 Pontos]
-Equação inicial: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D >= 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)}x ${coeffs.E >= 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)}y ${coeffs.F >= 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)} = 0
+Equação inicial: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D !== 0 ? (coeffs.D > 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)) + 'x ' : ''}${coeffs.E !== 0 ? (coeffs.E > 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)) + 'y ' : ''}${coeffs.F !== 0 ? (coeffs.F > 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)) : ''} = 0
 Forma Canônica Reduzida:
-${isX ? `${hStr}² / ${(p.a*p.a).toFixed(2)} - ${kStr}² / ${(p.b*p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a*p.a).toFixed(2)} - ${hStr}² / ${(p.b*p.b).toFixed(2)} = 1`}
+${isX ? `${hStr}² / ${(p.a * p.a).toFixed(2)} - ${kStr}² / ${(p.b * p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a * p.a).toFixed(2)} - ${hStr}² / ${(p.b * p.b).toFixed(2)} = 1`}
 
 II. [Parâmetros Geométricos - 3 Pontos]
 Centro C(${p.h}, ${p.k});
@@ -661,11 +667,11 @@ Problem: Reduce the hyperbola equation to standard form and determine center, fo
 
 Solution:
 I. [Completing the Square - 4 Points]
-Initial Equation: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D >= 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)}x ${coeffs.E >= 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)}y ${coeffs.F >= 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)} = 0
-Grouping and Factoring: ${coeffs.A}(x² ${coeffs.D/coeffs.A >= 0 ? '+ ' : '- '}${Math.abs(coeffs.D/coeffs.A)}x) ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}(y² ${coeffs.E/coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.E/coeffs.C)}y) = ${-coeffs.F}
-Perfect square form: ${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${(p.a*p.a*Math.abs(coeffs.A)).toFixed(1).replace(/\.0$/, '')}
+Initial Equation: ${coeffs.A}x² ${coeffs.C >= 0 ? '+ ' + coeffs.C : '- ' + Math.abs(coeffs.C)}y² ${coeffs.D !== 0 ? (coeffs.D > 0 ? '+ ' + coeffs.D : '- ' + Math.abs(coeffs.D)) + 'x ' : ''}${coeffs.E !== 0 ? (coeffs.E > 0 ? '+ ' + coeffs.E : '- ' + Math.abs(coeffs.E)) + 'y ' : ''}${coeffs.F !== 0 ? (coeffs.F > 0 ? '+ ' + coeffs.F : '- ' + Math.abs(coeffs.F)) : ''} = 0
+Grouping and Factoring: ${xGroupStr} ${yGroupStr} = ${-coeffs.F}
+Perfect square form: ${coeffs.A}${hStr}² ${coeffs.C >= 0 ? '+ ' : '- '}${Math.abs(coeffs.C)}${kStr}² = ${rhsStr}
 Standard Form Equation:
-${isX ? `${hStr}² / ${(p.a*p.a).toFixed(2)} - ${kStr}² / ${(p.b*p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a*p.a).toFixed(2)} - ${hStr}² / ${(p.b*p.b).toFixed(2)} = 1`}
+${isX ? `${hStr}² / ${(p.a * p.a).toFixed(2)} - ${kStr}² / ${(p.b * p.b).toFixed(2)} = 1` : `${kStr}² / ${(p.a * p.a).toFixed(2)} - ${hStr}² / ${(p.b * p.b).toFixed(2)} = 1`}
 
 II. [Geometric Parameters - 3 Points]
 Center C(${p.h}, ${p.k});

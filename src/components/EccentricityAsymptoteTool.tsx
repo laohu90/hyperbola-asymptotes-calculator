@@ -290,7 +290,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
               <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
                 <span className="text-slate-600">{t.asymptoteIfY}:</span>
                 <span className="font-mono font-bold text-emerald-700 text-sm sm:text-base">
-                  y = ± {(1 / ratioBOverA).toFixed(3)}x
+                  y = ± {ratioBOverA > 0 ? (1 / ratioBOverA).toFixed(3) : '0'}x
                 </span>
               </div>
 
