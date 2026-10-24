@@ -1,0 +1,6 @@
+{
+  "name": "双曲线渐近线与离心率精算器",
+  "description": "高中圆锥曲线难点攻坚：双曲线渐近线、离心率智能计算，一般方程配方法详细拆解步骤，双曲线与椭圆公式易混对比，动态几何画板。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
