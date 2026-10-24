@@ -2,10 +2,13 @@
 
 > High-precision analytic geometry calculator & visual solver for conic sections: instant hyperbola asymptotes, eccentricity calculations, step-by-step completing the square, hyperbola vs. ellipse comparison matrix, and dynamic interactive coordinate geometry canvas.
 
+[![Live Website](https://img.shields.io/badge/Live%20Demo-hyperbola--asymptotes--calculator.formulacalckit.com-2563eb?style=flat-square&logo=google-chrome)](https://hyperbola-asymptotes-calculator.formulacalckit.com)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-4.x-38bdf8.svg)](https://tailwindcss.com/)
+
+> 🌐 **Production URL**: [https://hyperbola-asymptotes-calculator.formulacalckit.com](https://hyperbola-asymptotes-calculator.formulacalckit.com)
 
 ---
 

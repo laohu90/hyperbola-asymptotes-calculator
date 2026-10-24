@@ -28,7 +28,9 @@ export const ShareAndTrafficModal: React.FC<ShareAndTrafficModalProps> = ({
 
   if (!isOpen) return null;
 
-  const appUrl = typeof window !== 'undefined' ? window.location.href : 'https://hyperbola-calc.ai';
+  const appUrl = typeof window !== 'undefined' && window.location.origin.includes('formulacalckit.com')
+    ? window.location.href
+    : 'https://hyperbola-asymptotes-calculator.formulacalckit.com';
 
   const promoPosts: Record<Language, string> = {
     en: `📐 [Conic Sections Mastery: Hyperbola & Ellipse Tool]

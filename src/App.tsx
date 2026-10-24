@@ -13,14 +13,25 @@ import { ShareAndTrafficModal } from './components/ShareAndTrafficModal';
 import { Language, TRANSLATIONS } from './i18n/translations';
 import { Sparkles, Compass, ArrowUpRight, TrendingUp } from 'lucide-react';
 
+const getInitialLang = (): Language => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const langParam = params.get('lang') as Language;
+    if (langParam && ['en', 'es', 'fr', 'pt', 'zh'].includes(langParam)) {
+      return langParam;
+    }
+  }
+  return 'en';
+};
+
 export default function App() {
-  const [currentLang, setCurrentLang] = useState<Language>('en'); // Default is English per requirements
+  const [currentLang, setCurrentLang] = useState<Language>(getInitialLang); // Default is English per requirements
   const [activeSection, setActiveSection] = useState<string>('calculator');
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
 
   const t = TRANSLATIONS[currentLang];
 
-  // Dynamically sync document title, html lang, and meta tags for high-ranking SEO
+  // Dynamically sync document title, html lang, canonical tag, and meta tags for high-ranking SEO
   useEffect(() => {
     document.title = t.meta.title;
     document.documentElement.lang = currentLang;
@@ -36,6 +47,26 @@ export default function App() {
 
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute('content', t.meta.description);
+
+    const canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (canonicalLink) {
+      canonicalLink.setAttribute(
+        'href',
+        currentLang === 'en'
+          ? 'https://hyperbola-asymptotes-calculator.formulacalckit.com/'
+          : `https://hyperbola-asymptotes-calculator.formulacalckit.com/?lang=${currentLang}`
+      );
+    }
+
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      const url = new URL(window.location.href);
+      if (currentLang === 'en') {
+        url.searchParams.delete('lang');
+      } else {
+        url.searchParams.set('lang', currentLang);
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
   }, [currentLang, t]);
 
   // Shared geometric state for the hyperbola
