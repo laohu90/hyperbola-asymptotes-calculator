@@ -70,16 +70,16 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
 
     if (res.isStandardForm && res.standardState) {
       onChange(res.standardState);
-      setPasteSuccess(res.description || '标准方程识别成功并已载入！');
+      setPasteSuccess(res.description || t.copiedSuccess);
     } else {
       // General form: solve completing square to get standard state
       import('../utils/mathUtils').then(({ solveCompletingSquare }) => {
         const sol = solveCompletingSquare(res.coeffs, lang);
         if (sol.success && sol.standardForm) {
           onChange(sol.standardForm);
-          setPasteSuccess(`一般方程已自动配方转换为标准型：a = ${sol.standardForm.a.toFixed(2)}, b = ${sol.standardForm.b.toFixed(2)}`);
+          setPasteSuccess(`a = ${sol.standardForm.a.toFixed(2)}, b = ${sol.standardForm.b.toFixed(2)}`);
         } else {
-          setPasteError(sol.message || '方程无法转换为标准双曲线。');
+          setPasteError(sol.message || 'Cannot parse equation.');
         }
       });
     }
@@ -99,16 +99,15 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
 
     const summary = `【${t.title}】
 ${t.currentEquation}: ${eq}
-中心 (h, k): (${h}, ${k})
-实半轴 a = ${simplifyRadical(a * a)} (a² = ${aSqStr}, 实轴长 2a = ${formatFraction(2 * a, 1)})
-虚半轴 b = ${simplifyRadical(b * b)} (b² = ${bSqStr}, 虚轴长 2b = ${formatFraction(2 * b, 1)})
-半焦距 c = √(a² + b²) = ${simplifyRadical(a * a + b * b)} (c² = ${cSqStr})
+C(h, k): (${h}, ${k})
+a = ${simplifyRadical(a * a)} (a² = ${aSqStr}, 2a = ${formatFraction(2 * a, 1)})
+b = ${simplifyRadical(b * b)} (b² = ${bSqStr}, 2b = ${formatFraction(2 * b, 1)})
+c = √(a² + b²) = ${simplifyRadical(a * a + b * b)} (c² = ${cSqStr})
 ${t.eccentricityE}: e = c/a = ${properties.eccentricity.toFixed(4).replace(/\.?0+$/, '')}
-渐近线 (点斜式): ${properties.asymptoteEquations.join(' , ')}
-渐近线 (斜截式): ${properties.asymptoteSlopeInterceptEquations.join(' , ')}
-渐近线 (一般式): ${properties.asymptoteGeneralEquations.join(' , ')}
-实轴分支夹角 θ = ${properties.asymptoteAngleDeg.toFixed(1)}°
-两线相交锐角 = ${properties.asymptoteAcuteAngleDeg.toFixed(1)}°
+${t.pointSlopeForm}: ${properties.asymptoteEquations.join(' , ')}
+${t.slopeInterceptForm}: ${properties.asymptoteSlopeInterceptEquations.join(' , ')}
+${t.generalLinearForm}: ${properties.asymptoteGeneralEquations.join(' , ')}
+θ = ${properties.asymptoteAngleDeg.toFixed(1)}°
 ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
 
     navigator.clipboard.writeText(summary);
@@ -158,10 +157,10 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <label className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
               <Wand2 className="w-4 h-4 text-blue-600" />
-              快速粘贴/输入标准方程直接解析
+              {t.quickPasteLabel}
             </label>
             <span className="text-xs text-slate-500 font-mono">
-              例如: (x-2)²/9 - (y+1)²/4 = 1 或 x²/16 - y²/9 = 1
+              e.g. (x-2)²/9 - (y+1)²/4 = 1 or x²/16 - y²/9 = 1
             </span>
           </div>
 
@@ -177,14 +176,14 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleQuickParse();
               }}
-              placeholder="直接粘贴标准方程，如 (x-1)²/25 - (y+2)²/16 = 1"
+              placeholder={t.quickPastePlaceholder}
               className="flex-1 px-3.5 py-2 text-xs sm:text-sm font-mono bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
             />
             <button
               onClick={handleQuickParse}
               className="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
-              一键解析载入
+              {t.quickParseBtn}
             </button>
           </div>
 
@@ -407,7 +406,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="text-xs sm:text-sm text-slate-400 mb-1.5 flex items-center justify-between">
                 <span>{t.currentEquation}</span>
                 <span className="font-mono text-emerald-400 font-semibold">
-                  {axis === 'x' ? '焦点在水平方向 (x轴)' : '焦点在垂直方向 (y轴)'}
+                  {axis === 'x' ? 'x-axis Transverse' : 'y-axis Transverse'}
                 </span>
               </div>
               <div className="text-lg sm:text-xl font-mono text-center py-1.5">
@@ -442,17 +441,17 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-sm font-bold text-rose-900 flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-rose-600" />
-                  {t.asymptoteTitle} (3 种完备表示)
+                  {t.asymptote3Forms}
                 </span>
                 <span className="text-xs font-mono text-rose-700 bg-white px-2.5 py-0.5 rounded border border-rose-200 font-semibold">
-                  斜率 k = ± {axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}
+                  k = ± {axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}
                 </span>
               </div>
 
               {/* 3 Forms Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs sm:text-sm">
                 <div className="bg-white p-3 rounded-lg border border-rose-100">
-                  <span className="text-slate-500 block mb-1 text-xs">① 点斜式 (Point-Slope)</span>
+                  <span className="text-slate-500 block mb-1 text-xs">{t.pointSlopeForm}</span>
                   <div className="font-mono font-bold text-rose-700 leading-snug">
                     {properties.asymptoteEquations.map((eq, i) => (
                       <div key={i}>{eq}</div>
@@ -461,7 +460,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 </div>
 
                 <div className="bg-white p-3 rounded-lg border border-rose-100">
-                  <span className="text-slate-500 block mb-1 text-xs">② 斜截式 (Slope-Intercept)</span>
+                  <span className="text-slate-500 block mb-1 text-xs">{t.slopeInterceptForm}</span>
                   <div className="font-mono font-bold text-rose-700 leading-snug">
                     {properties.asymptoteSlopeInterceptEquations.map((eq, i) => (
                       <div key={i}>{eq}</div>
@@ -470,7 +469,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 </div>
 
                 <div className="bg-white p-3 rounded-lg border border-rose-100">
-                  <span className="text-slate-500 block mb-1 text-xs">③ 一般式 (General Linear)</span>
+                  <span className="text-slate-500 block mb-1 text-xs">{t.generalLinearForm}</span>
                   <div className="font-mono font-bold text-rose-700 leading-snug">
                     {properties.asymptoteGeneralEquations.map((eq, i) => (
                       <div key={i}>{eq}</div>
@@ -480,7 +479,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               </div>
 
               <div className="text-xs text-rose-900 leading-relaxed bg-rose-100/60 p-2.5 rounded-lg">
-                <strong>速算秘籍（令 1 为 0 法）：</strong> 将标准方程右边的常数 1 直接替换为 0，因式分解立刻得到渐近线方程：
+                <strong>{t.asymptoteTrickTitle}</strong> {t.asymptoteTrickDesc}
                 <span className="font-mono font-semibold ml-1">
                   {axis === 'x' ? '(x/a - y/b)(x/a + y/b) = 0' : '(y/a - x/b)(y/a + x/b) = 0'}
                 </span>
@@ -505,7 +504,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                   e = {properties.eccentricity.toFixed(3)}
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  e = c/a = √(1 + (b/a)²) &gt; 1
+                  e = c/a = √(1 + (b/a)²)
                 </span>
               </div>
 
@@ -515,7 +514,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                   {properties.asymptoteAngleDeg.toFixed(1)}°
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  锐角相交: {properties.asymptoteAcuteAngleDeg.toFixed(1)}°
+                  min = {properties.asymptoteAcuteAngleDeg.toFixed(1)}°
                 </span>
               </div>
 
@@ -532,10 +531,10 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                 <span className="text-slate-500 block mb-1 text-xs">{t.fociLabel}</span>
                 <span className="font-mono text-red-700 text-xs sm:text-sm block">
-                  F₁({formatFraction(properties.foci[0].x, 1)}, {formatFraction(properties.foci[0].y, 1)})
+                  F₁({axis === 'x' ? (h === 0 ? `-${simplifyRadical(a * a + b * b)}` : `${formatFraction(h, 1)} - ${simplifyRadical(a * a + b * b)}`) : formatFraction(h, 1)}, {axis === 'y' ? (k === 0 ? `-${simplifyRadical(a * a + b * b)}` : `${formatFraction(k, 1)} - ${simplifyRadical(a * a + b * b)}`) : formatFraction(k, 1)})
                 </span>
                 <span className="font-mono text-red-700 text-xs sm:text-sm block">
-                  F₂({formatFraction(properties.foci[1].x, 1)}, {formatFraction(properties.foci[1].y, 1)})
+                  F₂({axis === 'x' ? (h === 0 ? simplifyRadical(a * a + b * b) : `${formatFraction(h, 1)} + ${simplifyRadical(a * a + b * b)}`) : formatFraction(h, 1)}, {axis === 'y' ? (k === 0 ? simplifyRadical(a * a + b * b) : `${formatFraction(k, 1)} + ${simplifyRadical(a * a + b * b)}`) : formatFraction(k, 1)})
                 </span>
               </div>
 
@@ -554,9 +553,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
               <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <strong>渐近线夹角定义说明：</strong>
-                此处 θ 为包含双曲线实轴（分支开口所夹）的顶角（横轴时 θ = 2·arctan(b/a) = {properties.asymptoteAngleDeg.toFixed(1)}°）；
-                两直线自身的最小相交锐角为 {properties.asymptoteAcuteAngleDeg.toFixed(1)}°。
+                {t.angleDefinitionNote}
               </div>
             </div>
 

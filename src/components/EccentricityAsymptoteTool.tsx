@@ -90,7 +90,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
           }`}
         >
           <ArrowLeftRight className="w-4 h-4" />
-          离心率 e ↔ 渐近线斜率双解互化
+          {t.tabKE}
         </button>
 
         <button
@@ -102,7 +102,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
           }`}
         >
           <Crosshair className="w-4 h-4" />
-          【高考必考】已知渐近线 + 过定点求方程
+          {t.tabAsymptotePoint}
         </button>
 
         <button
@@ -114,7 +114,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
           }`}
         >
           <Target className="w-4 h-4" />
-          【经典题型】已知焦点/顶点求标准方程
+          {t.tabFociVertices}
         </button>
       </div>
 
@@ -261,7 +261,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                       </span>
                     </div>
                     <p className="text-slate-600 text-xs mt-2 leading-relaxed">
-                      实轴在 x 轴：e² = 1 + ({slopeK})² = {formatFraction(1 + slopeK * slopeK, 1)}。
+                      e² = 1 + ({slopeK})² = {formatFraction(1 + slopeK * slopeK, 1)}.
                     </p>
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                       </span>
                     </div>
                     <p className="text-slate-600 text-xs mt-2 leading-relaxed">
-                      实轴在 y 轴：b/a = 1/k ⇒ e² = 1 + (1/{slopeK})² = {formatFraction(1 + 1 / (slopeK * slopeK), 1)}。
+                      b/a = 1/k ⇒ e² = 1 + (1/{slopeK})² = {formatFraction(1 + 1 / (slopeK * slopeK), 1)}.
                     </p>
                   </div>
                 </div>
@@ -390,10 +390,10 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                     <span className="text-slate-600">{t.angleBetween}:</span>
                     <div className="text-right">
                       <span className="font-mono font-bold text-purple-700 text-base block">
-                        实轴开口角 θ = {totalAngleDeg.toFixed(1)}°
+                        θ = {totalAngleDeg.toFixed(1)}°
                       </span>
                       <span className="text-xs text-slate-500 font-mono block">
-                        相交锐角 = {acuteAngleDeg.toFixed(1)}°
+                        {t.acuteIntersectionAngle}: {acuteAngleDeg.toFixed(1)}°
                       </span>
                     </div>
                   </div>
@@ -402,7 +402,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                 <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-950 leading-relaxed space-y-1">
                   <strong>💡 {t.geometricInsight}</strong>
                   <div className="text-xs text-amber-900">
-                    夹角定义提示：横轴时开口角 θ = 2·arctan(b/a)；纵轴时开口角 θ = 2·arctan(a/b)（包含实轴所在分支）。两渐近线本身的最小相交角始终为 min(θ, 180° - θ) ≤ 90°。
+                    {t.angleNoticeDetail}
                   </div>
                 </div>
               </div>
@@ -418,10 +418,10 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div>
               <h4 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
                 <Crosshair className="w-5 h-5 text-blue-600" />
-                【高考必考核心题型】已知渐近线方程及过某定点求双曲线方程
+                {t.tool2Heading}
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                采用全国各省高考数学官方标准“待定系数法（渐近线系方程法）”，一步规避分类讨论遗漏纵轴双曲线的失分陷阱！
+                {t.tool2Sub}
               </p>
             </div>
           </div>
@@ -430,7 +430,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm">
             <div>
               <label className="font-bold text-slate-700 block mb-1">
-                渐近线斜率 k (y = ± kx)
+                {t.slopeKLabel}
               </label>
               <input
                 type="number"
@@ -440,12 +440,12 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                 onChange={(e) => setTool2SlopeK(parseFloat(e.target.value) || 0.5)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono bg-white"
               />
-              <span className="text-slate-500 text-xs mt-1 block">如: 0.75 (3/4) 或 0.5 (1/2)</span>
+              <span className="text-slate-500 text-xs mt-1 block">0.75 (3/4) / 0.5 (1/2)</span>
             </div>
 
             <div>
               <label className="font-bold text-slate-700 block mb-1">
-                所过点 P 的横坐标 x₀
+                {t.pointXLabel}
               </label>
               <input
                 type="number"
@@ -457,7 +457,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
 
             <div>
               <label className="font-bold text-slate-700 block mb-1">
-                所过点 P 的纵坐标 y₀
+                {t.pointYLabel}
               </label>
               <input
                 type="number"
@@ -477,7 +477,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                   }}
                   className="px-2.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg font-mono text-xs text-slate-700 cursor-pointer"
                 >
-                  经典例1: P(5,0)
+                  {t.ex1Btn}
                 </button>
                 <button
                   onClick={() => {
@@ -487,7 +487,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                   }}
                   className="px-2.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg font-mono text-xs text-slate-700 cursor-pointer"
                 >
-                  纵轴例2: P(0,3)
+                  {t.ex2Btn}
                 </button>
               </div>
             </div>
@@ -498,7 +498,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs sm:text-sm flex items-start gap-2.5">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <strong>求解提示：</strong>
+                <strong>Notice:</strong>
                 <p className="mt-1">{tool2Solution.message}</p>
               </div>
             </div>
@@ -507,7 +507,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
               <div className="flex items-center justify-between bg-blue-50/70 p-4 rounded-xl border border-blue-200">
                 <div>
                   <span className="text-xs text-blue-700 font-bold block mb-0.5">
-                    求得双曲线标准方程：
+                    {t.solvedEqTitle}
                   </span>
                   <div className="font-mono text-base sm:text-lg font-bold text-blue-900">
                     {tool2Solution.axis === 'x'
@@ -522,7 +522,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors cursor-pointer shadow-xs"
                   >
                     <Sparkles className="w-4 h-4" />
-                    同步到交互几何画布
+                    {t.applyToCanvasBtn}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
@@ -556,10 +556,10 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div>
               <h4 className="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
                 <Target className="w-5 h-5 text-blue-600" />
-                【经典题型】已知焦点与顶点（或实半轴 a 与半焦距 c）求解标准方程
+                {t.tool3Heading}
               </h4>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                根据双曲线第一定义及基本特征关系式 c² = a² + b²，快速推导并输出标准方程、虚半轴 b、离心率及渐近线。
+                {t.tool3Sub}
               </p>
             </div>
           </div>
@@ -567,19 +567,19 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
           {/* Input Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm">
             <div>
-              <label className="font-bold text-slate-700 block mb-1">焦点所在轴</label>
+              <label className="font-bold text-slate-700 block mb-1">{t.focalAxisLabel}</label>
               <select
                 value={tool3Axis}
                 onChange={(e) => setTool3Axis(e.target.value as FocalAxis)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono bg-white"
               >
-                <option value="x">横轴 (x 轴水平开口)</option>
-                <option value="y">纵轴 (y 轴垂直开口)</option>
+                <option value="x">Horizontal (x-axis)</option>
+                <option value="y">Vertical (y-axis)</option>
               </select>
             </div>
 
             <div>
-              <label className="font-bold text-slate-700 block mb-1">实半轴 a (顶点距中心)</label>
+              <label className="font-bold text-slate-700 block mb-1">{t.semiALabel}</label>
               <input
                 type="number"
                 step="0.5"
@@ -591,7 +591,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             </div>
 
             <div>
-              <label className="font-bold text-slate-700 block mb-1">半焦距 c (焦点距中心)</label>
+              <label className="font-bold text-slate-700 block mb-1">{t.semiCLabel}</label>
               <input
                 type="number"
                 step="0.5"
@@ -611,7 +611,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                   }}
                   className="px-2.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg font-mono text-xs text-slate-700 cursor-pointer"
                 >
-                  勾股组: a=3, c=5
+                  {t.pythagoreanBtn}
                 </button>
                 <button
                   onClick={() => {
@@ -620,7 +620,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                   }}
                   className="px-2.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg font-mono text-xs text-slate-700 cursor-pointer"
                 >
-                  例: a=2, c=4
+                  {t.ex3Btn}
                 </button>
               </div>
             </div>
@@ -631,7 +631,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs sm:text-sm flex items-start gap-2.5">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <strong>输入错误：</strong>
+                <strong>Notice:</strong>
                 <p className="mt-1">{tool3Solution.message}</p>
               </div>
             </div>
@@ -640,7 +640,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
               <div className="flex items-center justify-between bg-emerald-50/80 p-4 rounded-xl border border-emerald-200">
                 <div>
                   <span className="text-xs text-emerald-800 font-bold block mb-0.5">
-                    标准方程求解结果：
+                    {t.solvedResultTitle}
                   </span>
                   <div className="font-mono text-base sm:text-lg font-bold text-emerald-950">
                     {tool3Axis === 'x'
@@ -655,7 +655,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs sm:text-sm rounded-lg transition-colors cursor-pointer shadow-xs"
                   >
                     <Sparkles className="w-4 h-4" />
-                    同步到交互几何画布
+                    {t.applyToCanvasBtn}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}

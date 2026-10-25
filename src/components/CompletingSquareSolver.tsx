@@ -252,7 +252,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               {t.title}
             </h2>
             <span className="text-xs px-2.5 py-0.5 rounded font-mono bg-blue-100 text-blue-800 font-semibold">
-              Ax² + Cy² + Dx + Ey + F = 0 / Standard Form
+              Ax² + Cy² + Dx + Ey + F = 0
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
@@ -283,7 +283,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               {t.pasteLabel}
             </label>
             <span className="text-xs text-blue-700 font-mono">
-              支持: 4x² - 9y² - 16x - 18y = 29 或 (x-2)²/9 - (y+1)²/4 = 1
+              {t.pasteHelpTip}
             </span>
           </div>
           <div className="flex gap-2">
@@ -451,7 +451,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-3 my-4">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-sm sm:text-base">Warning / 提示:</h4>
+              <h4 className="font-semibold text-sm sm:text-base">Notice:</h4>
               <p className="text-xs sm:text-sm mt-1 text-amber-800 leading-relaxed">{solution.message}</p>
             </div>
           </div>
@@ -526,7 +526,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
                     <span className="text-slate-500 block mb-0.5">{t.focalAxisDirection}</span>
                     <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
-                      {solution.properties.axis === 'x' ? 'x-axis (Horizontal)' : 'y-axis (Vertical)'}
+                      {solution.properties.axis === 'x' ? 'x-axis Transverse' : 'y-axis Transverse'}
                     </span>
                   </div>
                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
@@ -553,30 +553,30 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
                 <div className="mt-3.5 bg-white p-4 rounded-lg border border-blue-100 space-y-2.5 text-xs sm:text-sm shadow-2xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
                     <span className="font-bold text-slate-800">
-                      {t.asymptoteEquations} (3 种标准表示形式)：
+                      {t.threeAsymptoteForms}
                     </span>
                     <div className="text-xs text-slate-500 font-mono">
-                      实轴夹角 θ = {solution.properties.asymptoteAngleDeg.toFixed(1)}° ； 锐角 = {solution.properties.asymptoteAcuteAngleDeg.toFixed(1)}°
+                      θ = {solution.properties.asymptoteAngleDeg.toFixed(1)}° ; min = {solution.properties.asymptoteAcuteAngleDeg.toFixed(1)}°
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block mb-1 text-xs">① 点斜式 (Point-Slope)</span>
+                      <span className="text-slate-500 block mb-1 text-xs">{t.pointSlopeForm}</span>
                       <span className="font-mono font-bold text-blue-700 text-xs sm:text-sm block">
                         {solution.properties.asymptoteEquations.join(' ; ')}
                       </span>
                     </div>
 
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block mb-1 text-xs">② 斜截式 (Slope-Intercept)</span>
+                      <span className="text-slate-500 block mb-1 text-xs">{t.slopeInterceptForm}</span>
                       <span className="font-mono font-bold text-emerald-700 text-xs sm:text-sm block">
                         {solution.properties.asymptoteSlopeInterceptEquations.join(' ; ')}
                       </span>
                     </div>
 
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                      <span className="text-slate-500 block mb-1 text-xs">③ 一般式 (General Linear)</span>
+                      <span className="text-slate-500 block mb-1 text-xs">{t.generalLinearForm}</span>
                       <span className="font-mono font-bold text-purple-700 text-xs sm:text-sm block">
                         {solution.properties.asymptoteGeneralEquations.join(' ; ')}
                       </span>
@@ -586,7 +586,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
                   <div className="flex items-center gap-1.5 text-slate-500 text-xs pt-1">
                     <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                     <span>
-                      渐近线夹角说明：此处 θ 为包含双曲线实轴（分支开口）所夹的顶角（θ = 2·arctan(b/a)）；两直线本身的最小相交锐角为 min(θ, 180° - θ)。
+                      {t.angleDefinitionNote}
                     </span>
                   </div>
                 </div>

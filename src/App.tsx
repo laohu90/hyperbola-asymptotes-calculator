@@ -10,6 +10,8 @@ import { ComparisonMatrix } from './components/ComparisonMatrix';
 import { ClassicProblemsBank } from './components/ClassicProblemsBank';
 import { FAQSection } from './components/FAQSection';
 import { ShareAndTrafficModal } from './components/ShareAndTrafficModal';
+import { AboutModal } from './components/AboutModal';
+import { PrivacyModal } from './components/PrivacyModal';
 import { Language, TRANSLATIONS } from './i18n/translations';
 import { Sparkles, Compass, ArrowUpRight, TrendingUp } from 'lucide-react';
 
@@ -25,13 +27,27 @@ const getInitialLang = (): Language => {
 };
 
 export default function App() {
-  const [currentLang, setCurrentLang] = useState<Language>(getInitialLang); // Default is English per requirements
+  const [currentLang, setCurrentLang] = useState<Language>(getInitialLang);
   const [activeSection, setActiveSection] = useState<string>('calculator');
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
 
   const t = TRANSLATIONS[currentLang];
 
-  // Dynamically sync document title, html lang, canonical tag, and meta tags for high-ranking SEO
+  // Route handling for /about and /privacy paths
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/about') {
+        setIsAboutModalOpen(true);
+      } else if (path === '/privacy') {
+        setIsPrivacyModalOpen(true);
+      }
+    }
+  }, []);
+
+  // Dynamically sync document title, html lang, canonical tag, and meta tags
   useEffect(() => {
     document.title = t.meta.title;
     document.documentElement.lang = currentLang;
@@ -98,6 +114,22 @@ export default function App() {
     }
   };
 
+  const growthTipText = {
+    zh: '冷启动诊断：新上线的工具如何快速获取自然搜索量与种子学生群口碑？',
+    en: 'Cold Start Diagnosis: Why do new math tools struggle for organic traffic and how to jumpstart user adoption?',
+    es: 'Diagnóstico de tráfico: Cómo posicionar nuevas herramientas matemáticas en búsquedas orgánicas.',
+    fr: 'Diagnostic de trafic : Comment référencer de nouveaux outils mathématiques auprès des étudiants.',
+    pt: 'Diagnóstico de tráfego: Como posicionar ferramentas matemáticas em buscas orgânicas.',
+  }[currentLang] || 'Cold Start Diagnosis: Why do new math tools struggle for organic traffic and how to jumpstart user adoption?';
+
+  const growthBadgeText = {
+    zh: '增长指南',
+    en: 'Growth Tip',
+    es: 'Guía de Difusión',
+    fr: 'Conseil Diffusion',
+    pt: 'Guia de Difusão',
+  }[currentLang] || 'Growth Tip';
+
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Top Navigation Bar with Language Switcher */}
@@ -116,12 +148,10 @@ export default function App() {
         <div className="p-3.5 sm:p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-amber-950">
           <div className="flex items-center gap-2.5">
             <span className="font-bold bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-md text-xs whitespace-nowrap">
-              {currentLang === 'zh' ? '增长指南' : 'Growth & Traffic Tip'}
+              {growthBadgeText}
             </span>
             <span className="text-xs sm:text-sm">
-              {currentLang === 'zh'
-                ? '冷启动诊断：新上线的工具如何快速获取自然搜索量与种子学生群口碑？'
-                : 'Cold Start Diagnosis: Why do new math tools struggle for organic traffic and how to jumpstart user adoption?'}
+              {growthTipText}
             </span>
           </div>
           <button
@@ -221,7 +251,7 @@ export default function App() {
               <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
                 <span className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
                   <Compass className="w-4 h-4 text-blue-600" />
-                  {currentLang === 'zh' ? '动态直角坐标系几何画板' : 'Dynamic Coordinate Geometry Stage'}
+                  {t.canvas.title}
                 </span>
                 <span className="text-xs sm:text-sm text-slate-500 font-mono">
                   a={standardState.a} · b={standardState.b} · c={properties.c.toFixed(2)} · e={properties.eccentricity.toFixed(3)}
@@ -258,16 +288,6 @@ export default function App() {
 
         {/* Section 3: Eccentricity & Asymptote Relationship Tool */}
         <section id="eccentricity-asymptote" className="scroll-mt-24">
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {t.eccentricityTool.coreRelationTitle}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              {currentLang === 'zh'
-                ? '破解「由斜率求离心率」双解遗漏陷阱，掌握渐近线夹角与双曲线开阔度变化规律'
-                : 'Solve dual-solution traps when determining eccentricity from asymptote slope, and visualize angular aperture.'}
-            </p>
-          </div>
           <EccentricityAsymptoteTool
             t={t.eccentricityTool}
             lang={currentLang}
@@ -280,14 +300,6 @@ export default function App() {
 
         {/* Section 4: Hyperbola vs Ellipse Anti-Confusion Comparison */}
         <section id="comparison" className="scroll-mt-24">
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {t.comparison.title}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              {t.comparison.desc}
-            </p>
-          </div>
           <ComparisonMatrix t={t.comparison} lang={currentLang} />
         </section>
 
@@ -303,13 +315,32 @@ export default function App() {
       {/* Clean Pure White Footer */}
       <footer className="mt-20 border-t border-slate-200 bg-white py-10 text-center text-xs sm:text-sm text-slate-500">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="font-semibold text-slate-800">{t.nav.brand}</span>
             <span>·</span>
-            <span>{t.hero.card1Title} & {t.hero.card3Title}</span>
+            <button
+              onClick={() => setIsAboutModalOpen(true)}
+              className="hover:text-blue-600 transition-colors cursor-pointer font-medium"
+            >
+              {t.footer.aboutLink}
+            </button>
+            <span>·</span>
+            <button
+              onClick={() => setIsPrivacyModalOpen(true)}
+              className="hover:text-blue-600 transition-colors cursor-pointer font-medium"
+            >
+              {t.footer.privacyLink}
+            </button>
+            <span>·</span>
+            <button
+              onClick={() => setIsAboutModalOpen(true)}
+              className="hover:text-blue-600 transition-colors cursor-pointer font-medium"
+            >
+              {t.footer.errataLink}
+            </button>
           </div>
           <div className="text-slate-400 font-mono text-xs">
-            c² = a² + b² · e = √(1 + b²/a²) &gt; 1 · y = ±(b/a)x
+            {t.footer.rights}
           </div>
         </div>
       </footer>
@@ -350,11 +381,24 @@ export default function App() {
         </button>
       </div>
 
-      {/* Traffic & Share Diagnostic Modal */}
+      {/* Modals */}
       <ShareAndTrafficModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         t={t.modal}
+        lang={currentLang}
+      />
+
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
+        lang={currentLang}
+        t={t}
+      />
+
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
         lang={currentLang}
       />
     </div>
