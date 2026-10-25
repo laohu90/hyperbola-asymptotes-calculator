@@ -1088,7 +1088,9 @@ export const ClassicProblemsBank: React.FC<ClassicProblemsBankProps> = ({ t, lan
 
                         <div className="mt-2.5 pt-2 border-t border-slate-200/60 space-y-1 font-mono text-xs text-slate-600">
                           {q.detailedSteps.map((s, idx) => (
-                            <div key={idx}>{s}</div>
+                            <div key={idx} className="my-0.5">
+                              <MathView formula={s} inline />
+                            </div>
                           ))}
                         </div>
                       </div>

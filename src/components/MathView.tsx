@@ -9,23 +9,39 @@ interface MathViewProps {
 /**
  * Clean mathematical typography renderer
  * Handles fractions, powers, subscripts, square roots, plus-minus, etc.
+ * Supports nested LaTeX syntax without leaking raw \frac or \sqrt codes
  */
 export const MathView: React.FC<MathViewProps> = ({ formula, className = '', inline = false }) => {
-  // Simple regex-based token parsing for clean math rendering without bulky TeX bundles
-  // Supports \frac{a}{b}, x^2, \pm, \sqrt{...}, etc.
+  const formatInlineText = (text: string): React.ReactNode => {
+    let processed = text
+      .replace(/\\text\{([^}]+)\}/g, '$1')
+      .replace(/\\sqrt\{([^}]+)\}/g, '√$1')
+      .replace(/\\pm/g, '±')
+      .replace(/\\cdot/g, '·')
+      .replace(/\\times/g, '×')
+      .replace(/\\implies/g, '⇒')
+      .replace(/\\quad/g, '  ')
+      .replace(/\\theta/g, 'θ')
+      .replace(/\\cot/g, 'cot')
+      .replace(/\\tan/g, 'tan')
+      .replace(/\\triangle/g, '△')
+      .replace(/\\angle/g, '∠')
+      .replace(/\\circ/g, '°')
+      .replace(/<=/g, ' ≤ ')
+      .replace(/>=/g, ' ≥ ')
+      .replace(/=>/g, ' ⇒ ');
+    return processed;
+  };
+
   const renderFormatted = (text: string) => {
-    // Process line breaks
     const lines = text.split('\n');
     return lines.map((line, lineIdx) => {
-      // Split tokens like fractions \frac{num}{den}
       const parts: React.ReactNode[] = [];
       let remaining = line;
       let key = 0;
 
       while (remaining.length > 0) {
-        // Match \frac{num}{den}
         const fracMatch = remaining.match(/\\frac\{([^}]+)\}\{([^}]+)\}/);
-        // Match \sqrt{content}
         const sqrtMatch = remaining.match(/\\sqrt\{([^}]+)\}/);
 
         let matchIndex = -1;
@@ -47,7 +63,6 @@ export const MathView: React.FC<MathViewProps> = ({ formula, className = '', inl
         }
 
         if (matchIndex > 0) {
-          // Push text before match
           parts.push(
             <span key={key++} className="font-mono">
               {formatInlineText(remaining.substring(0, matchIndex))}
@@ -82,7 +97,6 @@ export const MathView: React.FC<MathViewProps> = ({ formula, className = '', inl
             remaining = remaining.substring(matchLength);
           }
         } else {
-          // No more special matches
           parts.push(
             <span key={key++} className="font-mono">
               {formatInlineText(remaining)}
@@ -98,19 +112,6 @@ export const MathView: React.FC<MathViewProps> = ({ formula, className = '', inl
         </div>
       );
     });
-  };
-
-  const formatInlineText = (text: string) => {
-    // Replace \pm with ±, * with ·, => with ⇒
-    let processed = text
-      .replace(/\\pm/g, '±')
-      .replace(/\*/g, ' · ')
-      .replace(/=>/g, ' ⇒ ')
-      .replace(/<=/g, ' ≤ ')
-      .replace(/>=/g, ' ≥ ');
-
-    // Superscripts like ^2 or ²
-    return processed;
   };
 
   return (

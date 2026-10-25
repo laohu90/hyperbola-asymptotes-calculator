@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Language } from '../i18n/translations';
 import { HelpCircle, ChevronDown, ChevronUp, BookOpen, CheckCircle } from 'lucide-react';
 import { MathView } from './MathView';
@@ -190,6 +190,10 @@ interface FAQSectionProps {
 
 export const FAQSection: React.FC<FAQSectionProps> = ({ lang }) => {
   const [openIndexes, setOpenIndexes] = useState<{ [key: number]: boolean }>({ 0: true, 1: true });
+
+  useEffect(() => {
+    setOpenIndexes({ 0: true, 1: true });
+  }, [lang]);
 
   const faqData = FAQS_BY_LANG[lang] || FAQS_BY_LANG.en;
 

@@ -310,12 +310,14 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                     </label>
                     <input
                       type="number"
-                      min="1.01"
-                      max="5"
                       step="0.05"
                       value={givenE}
-                      onChange={(e) => setGivenE(Math.max(1.001, parseFloat(e.target.value) || 1.1))}
-                      className="w-24 px-2.5 py-1.5 border border-slate-300 rounded-lg font-mono text-sm font-bold text-blue-700 bg-white"
+                      onChange={(e) => setGivenE(parseFloat(e.target.value) || 0)}
+                      className={`w-24 px-2.5 py-1.5 border rounded-lg font-mono text-sm font-bold bg-white ${
+                        givenE <= 1
+                          ? 'border-rose-400 text-rose-700 bg-rose-50/50'
+                          : 'border-slate-300 text-blue-700'
+                      }`}
                     />
                   </div>
                   <input
@@ -323,7 +325,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                     min="1.05"
                     max="3.5"
                     step="0.05"
-                    value={givenE}
+                    value={givenE <= 1 ? 1.05 : givenE}
                     onChange={(e) => setGivenE(parseFloat(e.target.value))}
                     className="w-full accent-blue-600 cursor-pointer"
                   />
@@ -363,49 +365,78 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
                 </div>
               </div>
 
-              <div className="lg:col-span-7 space-y-3.5">
-                <div className="p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 text-sm space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-slate-600">{t.ratioLabel}:</span>
-                    <span className="font-mono font-bold text-slate-900 text-sm sm:text-base">
-                      b/a = {ratioBOverA.toFixed(3)} (b²/a² = {formatFraction(givenE * givenE - 1, 1)})
+              {givenE <= 1 ? (
+                <div className="lg:col-span-7 p-5 bg-rose-50/90 border border-rose-200 rounded-xl text-rose-900 text-xs sm:text-sm space-y-2.5">
+                  <div className="flex items-center gap-2 font-bold text-rose-800 text-sm sm:text-base">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <span>
+                      {lang === 'zh'
+                        ? '非法离心率输入：双曲线离心率必须大于 1 (e > 1)'
+                        : lang === 'es'
+                        ? 'Excentricidad inválida: e debe ser mayor que 1 (e > 1)'
+                        : lang === 'fr'
+                        ? 'Excentricité invalide : e doit être supérieur à 1 (e > 1)'
+                        : lang === 'pt'
+                        ? 'Excentricidade inválida: e deve ser maior que 1 (e > 1)'
+                        : 'Invalid Eccentricity: e must be strictly greater than 1 (e > 1)'}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
-                    <span className="text-slate-600">{t.asymptoteIfX}:</span>
-                    <span className="font-mono font-bold text-blue-700 text-sm sm:text-base">
-                      y = ± {ratioBOverA.toFixed(3)}x
-                    </span>
+                  <p className="leading-relaxed">
+                    {lang === 'zh'
+                      ? `在双曲线中，半焦距 c 严格大于实半轴 a (c > a)，因此离心率 e = c/a 必须严格大于 1 (e > 1)。您当前输入的 e = ${givenE} 不满足双曲线定义。`
+                      : `In a hyperbola, focal distance c strictly exceeds semi-axis a (c > a), so eccentricity e = c/a must strictly exceed 1 (e > 1). Your current input e = ${givenE} violates hyperbola definition.`}
+                  </p>
+                  <div className="p-3 bg-white/90 rounded-lg border border-rose-200 font-mono text-xs text-rose-950 space-y-1">
+                    <div>• 0 &lt; e &lt; 1: {lang === 'zh' ? '椭圆 (Ellipse)' : 'Ellipse'}</div>
+                    <div>• e = 1: {lang === 'zh' ? '抛物线 (Parabola)' : 'Parabola'}</div>
+                    <div>• e &gt; 1: {lang === 'zh' ? '双曲线 (Hyperbola)' : 'Hyperbola'}</div>
                   </div>
-
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
-                    <span className="text-slate-600">{t.asymptoteIfY}:</span>
-                    <span className="font-mono font-bold text-emerald-700 text-sm sm:text-base">
-                      y = ± {ratioBOverA > 0 ? (1 / ratioBOverA).toFixed(3) : '0'}x
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
-                    <span className="text-slate-600">{t.angleBetween}:</span>
-                    <div className="text-right">
-                      <span className="font-mono font-bold text-purple-700 text-base block">
-                        θ = {totalAngleDeg.toFixed(1)}°
+                </div>
+              ) : (
+                <div className="lg:col-span-7 space-y-3.5">
+                  <div className="p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 text-sm space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-slate-600">{t.ratioLabel}:</span>
+                      <span className="font-mono font-bold text-slate-900 text-sm sm:text-base">
+                        b/a = {ratioBOverA.toFixed(3)} (b²/a² = {formatFraction(givenE * givenE - 1, 1)})
                       </span>
-                      <span className="text-xs text-slate-500 font-mono block">
-                        {t.acuteIntersectionAngle}: {acuteAngleDeg.toFixed(1)}°
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
+                      <span className="text-slate-600">{t.asymptoteIfX}:</span>
+                      <span className="font-mono font-bold text-blue-700 text-sm sm:text-base">
+                        y = ± {ratioBOverA.toFixed(3)}x
                       </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
+                      <span className="text-slate-600">{t.asymptoteIfY}:</span>
+                      <span className="font-mono font-bold text-emerald-700 text-sm sm:text-base">
+                        y = ± {ratioBOverA > 0 ? (1 / ratioBOverA).toFixed(3) : '0'}x
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 flex-wrap gap-2">
+                      <span className="text-slate-600">{t.angleBetween}:</span>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-purple-700 text-base block">
+                          θ = {totalAngleDeg.toFixed(1)}°
+                        </span>
+                        <span className="text-xs text-slate-500 font-mono block">
+                          {t.acuteIntersectionAngle}: {acuteAngleDeg.toFixed(1)}°
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-950 leading-relaxed space-y-1">
+                    <strong>💡 {t.geometricInsight}</strong>
+                    <div className="text-xs text-amber-900">
+                      {t.angleNoticeDetail}
                     </div>
                   </div>
                 </div>
-
-                <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-950 leading-relaxed space-y-1">
-                  <strong>💡 {t.geometricInsight}</strong>
-                  <div className="text-xs text-amber-900">
-                    {t.angleNoticeDetail}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
