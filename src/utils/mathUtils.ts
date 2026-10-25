@@ -25,7 +25,7 @@ export function gcd(a: number, b: number): number {
  * Format a rational number into reduced fraction string
  */
 export function formatFraction(numerator: number, denominator: number): string {
-  if (Math.abs(denominator) < 1e-9) return '未定义';
+  if (Math.abs(denominator) < 1e-9) return 'undefined';
   if (Math.abs(numerator) < 1e-9) return '0';
 
   const val = numerator / denominator;
@@ -56,7 +56,7 @@ export function formatFraction(numerator: number, denominator: number): string {
  * Simplify radical: e.g. 13 -> "√13", 16 -> "4", 20 -> "2√5"
  */
 export function simplifyRadical(val: number): string {
-  if (val < 0) return '虚数';
+  if (val < 0) return 'NaN';
   if (Math.abs(val) < 1e-9) return '0';
 
   const rounded = Math.round(val * 10000) / 10000;
@@ -330,7 +330,10 @@ export type ParseEquationResult =
  * - Normalizes fullwidth brackets & slashes
  * - Detects and rejects xy / yx rotated terms
  */
-export function sanitizeEquationString(raw: string): { clean: string; error?: string } {
+export function sanitizeEquationString(
+  raw: string,
+  lang: Language = 'en'
+): { clean: string; error?: string } {
   let str = raw
     .replace(/[\u2212\u2013\u2014\uFF0D\uFE63]/g, '-') // Unicode minus / dashes
     .replace(/[\uFF0B\uFE62]/g, '+') // Fullwidth plus
@@ -344,9 +347,16 @@ export function sanitizeEquationString(raw: string): { clean: string; error?: st
     .replace(/[\s\u3000]+/g, ''); // Whitespace & fullwidth space
 
   if (/xy|yx/i.test(str)) {
+    const xyErrors: Record<Language, string> = {
+      zh: '检测到方程含 xy 交叉项（旋转双曲线）。本工具专注标准方向（对称轴平行于坐标轴）的双曲线，暂不支持斜向旋转双曲线。',
+      en: 'Detected xy cross-product term (rotated hyperbola). This tool supports standard hyperbolas with axes parallel to the coordinate axes.',
+      es: 'Se detectó término cruzado xy (hipérbola rotada). Esta herramienta admite hipérbolas con ejes paralelos a los ejes coordenados.',
+      fr: 'Terme croisé xy détecté (hyperbole tournée). Cet outil prend en charge les hyperboles d’axes parallèles aux axes cartésiens.',
+      pt: 'Termo cruzado xy detectado (hipérbole rotacionada). Esta ferramenta suporta hipérboles com eixos paralelos aos eixos cartesianos.',
+    };
     return {
       clean: str,
-      error: '检测到方程含 xy 交叉项（旋转双曲线）。本工具专注标准方向（对称轴平行于坐标轴）的双曲线，暂不支持斜向旋转双曲线。',
+      error: xyErrors[lang] || xyErrors.en,
     };
   }
 
@@ -360,7 +370,7 @@ export function sanitizeEquationString(raw: string): { clean: string; error?: st
  * "(y-1)^2/16 - (x+2)^2/9 = 1"
  * "(y+3)^2/25 - (x-1)^2/16 = 1"
  */
-function tryParseStandardForm(str: string): ParseEquationResult | null {
+function tryParseStandardForm(str: string, lang: Language = 'en'): ParseEquationResult | null {
   // Check if equation has '=' and contains fractions
   if (!str.includes('=')) return null;
 
@@ -369,17 +379,11 @@ function tryParseStandardForm(str: string): ParseEquationResult | null {
   if (isNaN(rhsVal) || rhsVal === 0) return null;
 
   // Pattern to match terms: e.g. +(x-2)^2/9 or -(y+1)^2/4 or x^2/9 or -y^2
-  // We want to extract both terms from lhs
-  // Replace leading '+' if any
   let normalizedLhs = lhs;
   if (!normalizedLhs.startsWith('+') && !normalizedLhs.startsWith('-')) {
     normalizedLhs = '+' + normalizedLhs;
   }
 
-  // Regex for standard terms
-  // Sign: [+-]
-  // Variable bracket: (?:\(([xy])([+-]\d*(?:\.\d+)?)\)|([xy]))\^2
-  // Denominator: (?:/(\d*(?:\.\d+)?))?
   const termRegex = /([+-])(?:\(([xy])([+-]\d*(?:\.\d+)?)\)|([xy]))\^2(?:\/(\d*(?:\.\d+)?))?/gi;
   const matches = [...normalizedLhs.matchAll(termRegex)];
 
@@ -393,7 +397,7 @@ function tryParseStandardForm(str: string): ParseEquationResult | null {
   for (const m of matches) {
     const sign = m[1] === '-' ? -1 : 1;
     const varName = (m[2] || m[4]).toLowerCase();
-    const shift = m[3] ? parseFloat(m[3]) : 0; // in (x - 2), shift is -2, so h = 2
+    const shift = m[3] ? parseFloat(m[3]) : 0;
     const denom = m[5] ? parseFloat(m[5]) : 1;
 
     if (denom <= 0) return null;
@@ -412,9 +416,16 @@ function tryParseStandardForm(str: string): ParseEquationResult | null {
   const effYSign = yTerm.sign * Math.sign(rhsVal);
 
   if (effXSign * effYSign > 0) {
+    const ellipseErrors: Record<Language, string> = {
+      zh: '识别为标准方程格式，但两个平方项符号相同，该方程表示椭圆或圆，而非双曲线！双曲线要求一正一负。',
+      en: 'Recognized standard form, but both squared terms have the same sign. This represents an ellipse or circle, not a hyperbola! Hyperbolas require opposite signs.',
+      es: 'Se reconoció formato canónico, pero ambos términos cuadráticos tienen el mismo signo (elipse o círculo, no hipérbola).',
+      fr: 'Format réduit reconnu, mais les deux carrés ont le même signe (ellipse, non hyperbole).',
+      pt: 'Formato padrão reconhecido, mas ambos os termos ao quadrado têm o mesmo sinal (elipse, não hipérbole).',
+    };
     return {
       success: false,
-      error: '识别为标准方程格式，但两个平方项符号相同，该方程表示椭圆或圆，而非双曲线！双曲线要求一正一负。',
+      error: ellipseErrors[lang] || ellipseErrors.en,
     };
   }
 
@@ -439,8 +450,6 @@ function tryParseStandardForm(str: string): ParseEquationResult | null {
   const b = Math.sqrt(bSq);
 
   // Convert to general equation Ax^2 + Cy^2 + Dx + Ey + F = 0
-  // Horizontal: bSq * (x - h)^2 - aSq * (y - k)^2 - aSq * bSq = 0
-  // Vertical: -bSq * (x - h)^2 + aSq * (y - k)^2 - aSq * bSq = 0
   let A: number;
   let C: number;
   let D: number;
@@ -471,29 +480,44 @@ function tryParseStandardForm(str: string): ParseEquationResult | null {
     F /= scale;
   }
 
+  const descMap: Record<Language, string> = {
+    zh: `标准型识别成功：${axis === 'x' ? '实轴在水平方向 (x轴)' : '实轴在垂直方向 (y轴)'}，中心 (${h}, ${k})，a = ${formatFraction(a, 1)}，b = ${formatFraction(b, 1)}`,
+    en: `Standard form recognized: ${axis === 'x' ? 'horizontal transverse axis (x-axis)' : 'vertical transverse axis (y-axis)'}, center (${h}, ${k}), a = ${formatFraction(a, 1)}, b = ${formatFraction(b, 1)}`,
+    es: `Forma canónica reconocida: ${axis === 'x' ? 'eje focal horizontal (eje x)' : 'eje focal vertical (eje y)'}, centro (${h}, ${k}), a = ${formatFraction(a, 1)}, b = ${formatFraction(b, 1)}`,
+    fr: `Forme réduite reconnue : ${axis === 'x' ? 'axe focal horizontal (axe x)' : 'axe focal vertical (axe y)'}, centre (${h}, ${k}), a = ${formatFraction(a, 1)}, b = ${formatFraction(b, 1)}`,
+    pt: `Forma reduzida reconhecida: ${axis === 'x' ? 'eixo focal horizontal (eixo x)' : 'eixo focal vertical (eixo y)'}, centro (${h}, ${k}), a = ${formatFraction(a, 1)}, b = ${formatFraction(b, 1)}`,
+  };
+
   return {
     success: true,
     coeffs: { A, C, D, E, F },
     isStandardForm: true,
     standardState: { axis, h, k, a, b },
-    description: `标准型识别成功：${axis === 'x' ? '实轴在水平方向 (x轴)' : '实轴在垂直方向 (y轴)'}，中心 (${h}, ${k})，a = ${formatFraction(a, 1)}，b = ${formatFraction(b, 1)}`,
+    description: descMap[lang] || descMap.en,
   };
 }
 
 /**
  * Universal equation parser: accepts general quadratic or standard form equations
  */
-export function parseAnyEquation(inputStr: string): ParseEquationResult {
-  const { clean, error } = sanitizeEquationString(inputStr);
+export function parseAnyEquation(inputStr: string, lang: Language = 'en'): ParseEquationResult {
+  const { clean, error } = sanitizeEquationString(inputStr, lang);
   if (error) {
     return { success: false, error };
   }
   if (!clean) {
-    return { success: false, error: '请输入有效的双曲线方程！' };
+    const emptyErr: Record<Language, string> = {
+      zh: '请输入有效的双曲线方程！例如：(x-2)²/9 - (y+1)²/4 = 1 或 4x² - 9y² - 16x - 18y - 29 = 0',
+      en: 'Please enter a valid hyperbola equation! E.g.: (x-2)²/9 - (y+1)²/4 = 1 or 4x² - 9y² - 16x - 18y - 29 = 0',
+      es: '¡Ingrese una ecuación de hipérbola válida! Ej.: (x-2)²/9 - (y+1)²/4 = 1 o 4x² - 9y² - 16x - 18y - 29 = 0',
+      fr: 'Veuillez entrer une équation d\'hyperbole valide ! Ex. : (x-2)²/9 - (y+1)²/4 = 1',
+      pt: 'Por favor insira uma equação de hipérbole válida! Ex.: (x-2)²/9 - (y+1)²/4 = 1',
+    };
+    return { success: false, error: emptyErr[lang] || emptyErr.en };
   }
 
   // 1. Try standard form first
-  const standardResult = tryParseStandardForm(clean);
+  const standardResult = tryParseStandardForm(clean, lang);
   if (standardResult) {
     return standardResult;
   }
@@ -514,7 +538,6 @@ export function parseAnyEquation(inputStr: string): ParseEquationResult {
   let F = 0;
 
   const parseSide = (sideStr: string, multiplier: number) => {
-    // Regex matching signed terms
     const regex = /([+-]?[^+-]+)/g;
     const matches = sideStr.match(regex);
     if (!matches) return;
@@ -558,23 +581,44 @@ export function parseAnyEquation(inputStr: string): ParseEquationResult {
   parseSide(rhs, -1);
 
   if (A === 0 && C === 0) {
+    const noQuadErr: Record<Language, string> = {
+      zh: '未能识别出二次项（缺少 x² 或 y²），请检查输入是否包含 x² 与 y²。',
+      en: 'Could not detect quadratic terms (missing x² or y²). Please verify the equation contains both x² and y².',
+      es: 'No se detectaron términos cuadráticos (falta x² o y²). Asegúrese de incluir x² e y².',
+      fr: 'Impossible de détecter les termes quadratiques (x² ou y² manquant).',
+      pt: 'Não foi possível detectar termos quadráticos (falta x² ou y²).',
+    };
     return {
       success: false,
-      error: '未能识别出二次项（缺少 x² 或 y²），请检查输入是否包含 x² 与 y²。',
+      error: noQuadErr[lang] || noQuadErr.en,
     };
   }
 
   if (A === 0 || C === 0) {
+    const zeroCoeffErr: Record<Language, string> = {
+      zh: '二次项系数 A 或 C 为 0。双曲线必须同时包含 x² 和 y² 项，否则退化为抛物线或直线！',
+      en: 'Leading coefficient A or C is 0. Hyperbolas require both x² and y² terms, otherwise it degenerates into a parabola or line!',
+      es: 'El coeficiente A o C es 0. ¡Las hipérbolas requieren términos x² e y²!',
+      fr: 'Le coefficient A ou C est nul. Une hyperbole requiert x² et y² !',
+      pt: 'O coeficiente A ou C é 0. Hipérboles exigem termos x² e y²!',
+    };
     return {
       success: false,
-      error: '二次项系数 A 或 C 为 0。双曲线必须同时包含 x² 和 y² 项，否则退化为抛物线或直线！',
+      error: zeroCoeffErr[lang] || zeroCoeffErr.en,
     };
   }
 
   if (A * C > 0) {
+    const sameSignErr: Record<Language, string> = {
+      zh: `二次项系数 A = ${A} 与 C = ${C} 同号（A·C > 0）。此方程表示椭圆或圆，而非双曲线！双曲线要求 A 与 C 异号。`,
+      en: `Coefficients A = ${A} and C = ${C} have the same sign (A·C > 0). This represents an ellipse or circle, not a hyperbola! Hyperbolas require opposite signs.`,
+      es: `Los coeficientes A = ${A} y C = ${C} tienen el mismo signo (A·C > 0). ¡Esto representa una elipse o circunferencia, no una hipérbola!`,
+      fr: `Les coefficients A = ${A} et C = ${C} ont le même signe (A·C > 0). Cela représente une ellipse, pas une hyperbole !`,
+      pt: `Os coeficientes A = ${A} e C = ${C} têm o mesmo sinal (A·C > 0). Isto representa uma elipse, não uma hipérbole!`,
+    };
     return {
       success: false,
-      error: `二次项系数 A = ${A} 与 C = ${C} 同号（A·C > 0）。此方程表示椭圆或圆，而非双曲线！双曲线要求 A 与 C 异号。`,
+      error: sameSignErr[lang] || sameSignErr.en,
     };
   }
 
@@ -1114,9 +1158,16 @@ export function solveHyperbolaFromAsymptoteAndPoint(
   lang: Language = 'en'
 ): AsymptoteAndPointSolution {
   if (Math.abs(slopeK) < 1e-5) {
+    const zeroSlopeErrors: Record<Language, string> = {
+      zh: '渐近线斜率 k 不能为 0！渐近线不能水平或垂直重合。',
+      en: 'Asymptote slope k cannot be 0! The asymptotes cannot degenerate into horizontal or vertical lines.',
+      es: '¡La pendiente de la asíntota k no puede ser 0!',
+      fr: 'La pente de l\'asymptote k ne peut pas être nulle !',
+      pt: 'A inclinação da assíntota k não pode ser 0!',
+    };
     return {
       success: false,
-      message: '渐近线斜率 k 不能为 0！',
+      message: zeroSlopeErrors[lang] || zeroSlopeErrors.en,
       steps: [],
     };
   }
@@ -1132,9 +1183,16 @@ export function solveHyperbolaFromAsymptoteAndPoint(
   const lambda = kSq * dx * dx - dy * dy;
 
   if (Math.abs(lambda) < 1e-7) {
+    const onAsymptoteErrors: Record<Language, string> = {
+      zh: `点 P(${x0}, ${y0}) 恰好落在渐近线 y - ${centerK} = ± ${formatFraction(kAbs, 1)}(x - ${centerH}) 上！渐近线上的点无法构成实双曲线（λ = 0 退化为两条相交直线）。`,
+      en: `Point P(${x0}, ${y0}) lies directly on the asymptote y - ${centerK} = ± ${formatFraction(kAbs, 1)}(x - ${centerH})! Points on asymptotes cannot form a non-degenerate hyperbola (λ = 0 degenerates into intersecting lines).`,
+      es: `¡El punto P(${x0}, ${y0}) se encuentra exactamente sobre la asíntota! No se puede formar una hipérbola real (λ = 0 degenera en dos rectas secantes).`,
+      fr: `Le point P(${x0}, ${y0}) est situé exactement sur l'asymptote ! Une hyperbole ne peut passer par ses asymptotes (λ = 0 dégénère en droites sécantes).`,
+      pt: `O ponto P(${x0}, ${y0}) situa-se exatamente sobre a assíntota! Não é possível formar uma hipérbole real (λ = 0 degenera em retas concorrentes).`,
+    };
     return {
       success: false,
-      message: `点 P(${x0}, ${y0}) 恰好落在渐近线 y - ${centerK} = ± ${formatFraction(kAbs, 1)}(x - ${centerH}) 上！渐近线上的点无法构成实双曲线（λ = 0 退化为相交直线）。`,
+      message: onAsymptoteErrors[lang] || onAsymptoteErrors.en,
       steps: [],
     };
   }
@@ -1142,17 +1200,63 @@ export function solveHyperbolaFromAsymptoteAndPoint(
   const steps = [];
 
   // Step 1: Set up family equation
+  const step1Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 1：设共渐近线的双曲线方程系（待定系数法）',
+      expl: `由于所求双曲线与已知渐近线拥有相同渐近线，因此设双曲线系为 k²(x - h)² - (y - k)² = λ （其中 λ ≠ 0 为待定参数）。该设法无需预先假设焦点在 x 轴还是 y 轴，由 λ 的符号自动确定！`,
+    },
+    en: {
+      title: 'Step 1: Set up the family of hyperbolas sharing the asymptotes (Undetermined Coefficients)',
+      expl: `Since the required hyperbola shares asymptotes y - k = ± k(x - h), define the hyperbola family as k²(x - h)² - (y - k)² = λ (where λ ≠ 0 is an unknown parameter). The sign of λ will naturally reveal whether the hyperbola is horizontal or vertical!`,
+    },
+    es: {
+      title: 'Paso 1: Plantear la familia de hipérbolas con las mismas asíntotas',
+      expl: `Planteamos la familia k²(x - h)² - (y - k)² = λ (donde λ ≠ 0). El signo de λ determinará automáticamente el eje focal.`,
+    },
+    fr: {
+      title: 'Étape 1 : Poser l\'équation de la famille d\'hyperboles homofocales',
+      expl: `On pose l'équation générale de la famille k²(x - h)² - (y - k)² = λ (avec λ ≠ 0). Le signe de λ fixe naturellement la direction focale.`,
+    },
+    pt: {
+      title: 'Passo 1: Estabelecer a família de hipérboles com as mesmas assíntotas',
+      expl: `Definimos a família k²(x - h)² - (y - k)² = λ (com λ ≠ 0). O sinal de λ definirá automaticamente o eixo focal.`,
+    },
+  };
+
   steps.push({
-    title: '步骤 1：设共渐近线的双曲线方程系（待定系数法）',
-    math: `k²(x - h)² - (y - k)² = λ  ⇒  ${formatFraction(kSq, 1)}(x - ${centerH})² - (y - ${centerK})² = λ`,
-    explanation: `由于所求双曲线与已知渐近线 y - ${centerK} = ± ${formatFraction(kAbs, 1)}(x - ${centerH}) 拥有相同渐近线，因此可直接设双曲线系为 k²(x - h)² - (y - k)² = λ （其中 λ ≠ 0 为待定常数）。该设法无需预先假设焦点在 x 轴还是 y 轴，由 λ 的符号自动决定！`,
+    title: (step1Map[lang] || step1Map.en).title,
+    math: `k²(x - h)² - (y - k)² = \\lambda  \\implies  ${formatFraction(kSq, 1)}(x - ${centerH})² - (y - ${centerK})² = \\lambda`,
+    explanation: (step1Map[lang] || step1Map.en).expl,
   });
 
   // Step 2: Plug in point
+  const step2Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 2：代入已知点 P(x₀, y₀) 求解待定参数 λ',
+      expl: `将点 P(${x0}, ${y0}) 代入方程系，计算得出待定常数 λ = ${formatFraction(lambda, 1)}。`,
+    },
+    en: {
+      title: 'Step 2: Substitute given point P(x₀, y₀) to solve for parameter λ',
+      expl: `Substitute the coordinates of P(${x0}, ${y0}) into the family equation to determine λ = ${formatFraction(lambda, 1)}.`,
+    },
+    es: {
+      title: 'Paso 2: Sustituir el punto P(x₀, y₀) para hallar λ',
+      expl: `Sustituyendo P(${x0}, ${y0}) obtenemos el valor del parámetro λ = ${formatFraction(lambda, 1)}.`,
+    },
+    fr: {
+      title: 'Étape 2 : Remplacer par le point P(x₀, y₀) pour calculer λ',
+      expl: `En remplaçant par les coordonnées de P(${x0}, ${y0}), on obtient le paramètre λ = ${formatFraction(lambda, 1)}.`,
+    },
+    pt: {
+      title: 'Passo 2: Substituir o ponto P(x₀, y₀) para calcular λ',
+      expl: `Substituindo as coordenadas de P(${x0}, ${y0}), obtemos o parâmetro λ = ${formatFraction(lambda, 1)}.`,
+    },
+  };
+
   steps.push({
-    title: '步骤 2：代入已知点 P(x₀, y₀) 求解待定参数 λ',
-    math: `λ = ${formatFraction(kSq, 1)}·(${dx})² - (${dy})² = ${formatFraction(kSq * dx * dx, 1)} - ${formatFraction(dy * dy, 1)} = ${formatFraction(lambda, 1)}`,
-    explanation: `将点 P(${x0}, ${y0}) 代入方程系，计算得出常数 λ = ${formatFraction(lambda, 1)}。`,
+    title: (step2Map[lang] || step2Map.en).title,
+    math: `\\lambda = ${formatFraction(kSq, 1)} \\cdot (${dx})² - (${dy})² = ${formatFraction(kSq * dx * dx, 1)} - ${formatFraction(dy * dy, 1)} = ${formatFraction(lambda, 1)}`,
+    explanation: (step2Map[lang] || step2Map.en).expl,
   });
 
   let axis: FocalAxis;
@@ -1161,24 +1265,66 @@ export function solveHyperbolaFromAsymptoteAndPoint(
 
   if (lambda > 0) {
     axis = 'x';
-    // k² (x-h)² - (y-k)² = lambda => (x-h)² / (lambda / k²) - (y-k)² / lambda = 1
     aSq = lambda / kSq;
     bSq = lambda;
+    const step3Map: Record<Language, { title: string; expl: string }> = {
+      zh: {
+        title: '步骤 3：根据 λ > 0 判定焦点轴向并化为标准方程',
+        expl: `因为 λ = ${formatFraction(lambda, 1)} > 0，所以 (x - h)² 项为正项，双曲线实轴平行于 x 轴（水平开口）！两边同除以 λ 即得标准方程。`,
+      },
+      en: {
+        title: 'Step 3: Determine transverse axis orientation (λ > 0) and normalize to standard form',
+        expl: `Since λ = ${formatFraction(lambda, 1)} > 0, the (x - h)² term is positive: the transverse axis is horizontal (parallel to x-axis). Dividing both sides by λ yields the standard form.`,
+      },
+      es: {
+        title: 'Paso 3: Como λ > 0, el eje focal es horizontal',
+        expl: `Al ser λ = ${formatFraction(lambda, 1)} > 0, el término en x es positivo. Dividiendo ambos miembros por λ se obtiene la ecuación canónica.`,
+      },
+      fr: {
+        title: 'Étape 3 : Détermination de l\'axe focal (λ > 0) et mise sous forme réduite',
+        expl: `Comme λ = ${formatFraction(lambda, 1)} > 0, le terme en x est positif : l'axe focal est horizontal.`,
+      },
+      pt: {
+        title: 'Passo 3: Determinação do eixo focal (λ > 0) e forma reduzida',
+        expl: `Como λ = ${formatFraction(lambda, 1)} > 0, o termo em x é positivo : o eixo focal é horizontal.`,
+      },
+    };
     steps.push({
-      title: '步骤 3：根据 λ > 0 判定焦点轴向并化为标准方程',
+      title: (step3Map[lang] || step3Map.en).title,
       math: `\\frac{(x - ${centerH})²}{${formatFraction(aSq, 1)}} - \\frac{(y - ${centerK})²}{${formatFraction(bSq, 1)}} = 1`,
-      explanation: `因为 λ = ${formatFraction(lambda, 1)} > 0，所以 (x - h)² 项系数为正，双曲线的实轴平行于 x 轴（水平开口）！两边同除以 λ 即得标准方程。`,
+      explanation: (step3Map[lang] || step3Map.en).expl,
     });
   } else {
     axis = 'y';
-    // k² (x-h)² - (y-k)² = lambda => (y-k)² / (-lambda) - (x-h)² / (-lambda / k²) = 1
     const absLambda = -lambda;
     aSq = absLambda;
     bSq = absLambda / kSq;
+    const step3Map: Record<Language, { title: string; expl: string }> = {
+      zh: {
+        title: '步骤 3：根据 λ < 0 判定焦点轴向并化为标准方程',
+        expl: `因为 λ = ${formatFraction(lambda, 1)} < 0，等式两边反号后 (y - k)² 项为正项，双曲线实轴平行于 y 轴（垂直开口）！两边同除以 ${formatFraction(absLambda, 1)} 即得标准方程。`,
+      },
+      en: {
+        title: 'Step 3: Determine transverse axis orientation (λ < 0) and normalize to standard form',
+        expl: `Since λ = ${formatFraction(lambda, 1)} < 0, multiplying by -1 makes the (y - k)² term positive: the transverse axis is vertical (parallel to y-axis).`,
+      },
+      es: {
+        title: 'Paso 3: Como λ < 0, el eje focal es vertical',
+        expl: `Al ser λ < 0, el término en y es positivo. Se divide por ${formatFraction(absLambda, 1)} para normalizar.`,
+      },
+      fr: {
+        title: 'Étape 3 : Détermination de l\'axe focal (λ < 0) et forme canonique',
+        expl: `Comme λ < 0, le terme en y est positif : l'axe focal est vertical.`,
+      },
+      pt: {
+        title: 'Passo 3: Determinação do eixo focal (λ < 0) e forma reduzida',
+        expl: `Como λ < 0, o termo em y é positivo : o eixo focal é vertical.`,
+      },
+    };
     steps.push({
-      title: '步骤 3：根据 λ < 0 判定焦点轴向并化为标准方程',
+      title: (step3Map[lang] || step3Map.en).title,
       math: `\\frac{(y - ${centerK})²}{${formatFraction(aSq, 1)}} - \\frac{(x - ${centerH})²}{${formatFraction(bSq, 1)}} = 1`,
-      explanation: `因为 λ = ${formatFraction(lambda, 1)} < 0，等式两边反号后 (y - k)² 项系数为正，双曲线的实轴平行于 y 轴（垂直开口）！两边同除以 ${formatFraction(absLambda, 1)} 即得标准方程。`,
+      explanation: (step3Map[lang] || step3Map.en).expl,
     });
   }
 
@@ -1193,10 +1339,33 @@ export function solveHyperbolaFromAsymptoteAndPoint(
   };
   const properties = calculateHyperbolaProperties(standardState);
 
+  const step4Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 4：求得双曲线几何参数',
+      expl: `实半轴 a = ${simplifyRadical(aSq)}，虚半轴 b = ${simplifyRadical(bSq)}，半焦距 c = ${simplifyRadical(aSq + bSq)}，离心率 e = ${properties.eccentricity.toFixed(3)}。`,
+    },
+    en: {
+      title: 'Step 4: Compute full geometric properties',
+      expl: `Transverse semi-axis a = ${simplifyRadical(aSq)}, conjugate semi-axis b = ${simplifyRadical(bSq)}, focal distance c = ${simplifyRadical(aSq + bSq)}, eccentricity e = ${properties.eccentricity.toFixed(3)}.`,
+    },
+    es: {
+      title: 'Paso 4: Obtener parámetros geométricos completos',
+      expl: `Semieje real a = ${simplifyRadical(aSq)}, semieje imaginario b = ${simplifyRadical(bSq)}, distancia focal c = ${simplifyRadical(aSq + bSq)}, excentricidad e = ${properties.eccentricity.toFixed(3)}.`,
+    },
+    fr: {
+      title: 'Étape 4 : Déterminer les grandeurs géométriques',
+      expl: `Demi-axe réel a = ${simplifyRadical(aSq)}, demi-axe imaginaire b = ${simplifyRadical(bSq)}, demi-distance focale c = ${simplifyRadical(aSq + bSq)}, excentricité e = ${properties.eccentricity.toFixed(3)}.`,
+    },
+    pt: {
+      title: 'Passo 4: Obter os parâmetros geométricos completos',
+      expl: `Semieixo real a = ${simplifyRadical(aSq)}, semieixo conjugado b = ${simplifyRadical(bSq)}, distância focal c = ${simplifyRadical(aSq + bSq)}, excentricidade e = ${properties.eccentricity.toFixed(3)}.`,
+    },
+  };
+
   steps.push({
-    title: '步骤 4：求得双曲线几何参数',
-    math: `a² = ${formatFraction(aSq, 1)} (a = ${simplifyRadical(aSq)}), \\quad b² = ${formatFraction(bSq, 1)} (b = ${simplifyRadical(bSq)}) \\\\ c = √(a² + b²) = ${simplifyRadical(aSq + bSq)}, \\quad e = c/a = ${properties.eccentricity.toFixed(3)}`,
-    explanation: `实半轴 a = ${simplifyRadical(aSq)}，虚半轴 b = ${simplifyRadical(bSq)}，半焦距 c = ${simplifyRadical(aSq + bSq)}，离心率 e = ${properties.eccentricity.toFixed(3)}。`,
+    title: (step4Map[lang] || step4Map.en).title,
+    math: `a² = ${formatFraction(aSq, 1)} \\; (a = ${simplifyRadical(aSq)}), \\quad b² = ${formatFraction(bSq, 1)} \\; (b = ${simplifyRadical(bSq)}) \\\\ c = \\sqrt{a² + b²} = ${simplifyRadical(aSq + bSq)}, \\quad e = c/a = ${properties.eccentricity.toFixed(3)}`,
+    explanation: (step4Map[lang] || step4Map.en).expl,
   });
 
   return {
@@ -1217,7 +1386,8 @@ export function solveHyperbolaFromFociAndVertices(
   a: number,
   c: number,
   h = 0,
-  k = 0
+  k = 0,
+  lang: Language = 'en'
 ): {
   success: boolean;
   message?: string;
@@ -1226,17 +1396,31 @@ export function solveHyperbolaFromFociAndVertices(
   steps: { title: string; math: string; explanation: string }[];
 } {
   if (a <= 0 || c <= 0) {
+    const posErrors: Record<Language, string> = {
+      zh: '实半轴 a 与半焦距 c 必须为严格大于 0 的正数！',
+      en: 'Semi-major axis a and focal distance c must be strictly positive (> 0)!',
+      es: '¡Los parámetros a y c deben ser mayores que 0!',
+      fr: 'Les grandeurs a et c doivent être strictement positives (> 0) !',
+      pt: 'Os parâmetros a e c devem ser estritamente positivos (> 0)!',
+    };
     return {
       success: false,
-      message: 'a 与 c 必须为大于 0 的正数！',
+      message: posErrors[lang] || posErrors.en,
       steps: [],
     };
   }
 
   if (c <= a) {
+    const cLessAErrors: Record<Language, string> = {
+      zh: `在双曲线中，焦距 c 必须严格大于实半轴 a（c > a，离心率 e = c/a > 1）！当前 c = ${c} ≤ a = ${a}，不构成双曲线（若 a > c 则为椭圆）。`,
+      en: `In a hyperbola, focal distance c must be strictly greater than transverse semi-axis a (c > a, e = c/a > 1)! Currently c = ${c} ≤ a = ${a}, which cannot form a hyperbola (if a > c, it would be an ellipse).`,
+      es: `¡En una hipérbola, la distancia focal c debe ser estrictamente mayor que a (c > a, e > 1)! Actualmente c = ${c} ≤ a = ${a}.`,
+      fr: `Dans une hyperbole, c doit être strictement supérieur à a (c > a, e > 1) ! Ici c = ${c} ≤ a = ${a}.`,
+      pt: `Em uma hipérbole, a distância focal c deve ser estritamente maior que a (c > a, e > 1)! Atualmente c = ${c} ≤ a = ${a}.`,
+    };
     return {
       success: false,
-      message: `在双曲线中，焦距 c 必须严格大于实半轴 a（c > a，离心率 e = c/a > 1）！当前 c = ${c} ≤ a = ${a}，不构成双曲线（若 a > c 则为椭圆）。`,
+      message: cLessAErrors[lang] || cLessAErrors.en,
       steps: [],
     };
   }
@@ -1247,23 +1431,92 @@ export function solveHyperbolaFromFociAndVertices(
   const standardState: HyperbolaStandardState = { axis, h, k, a, b };
   const properties = calculateHyperbolaProperties(standardState);
 
+  const step1Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 1：利用双曲线特征恒等式求解虚半轴 b',
+      expl: `【双曲线核心恒等式】：c² = a² + b² ⇒ b² = c² - a²。计算得 b² = ${formatFraction(bSq, 1)}。`,
+    },
+    en: {
+      title: 'Step 1: Use fundamental hyperbola identity to solve for conjugate semi-axis b',
+      expl: `[Hyperbola Identity]: c² = a² + b² ⇒ b² = c² - a². Computing yields b² = ${formatFraction(bSq, 1)}.`,
+    },
+    es: {
+      title: 'Paso 1: Usar la relación c² = a² + b² para hallar b²',
+      expl: `En la hipérbola: c² = a² + b² ⇒ b² = c² - a² = ${formatFraction(bSq, 1)}.`,
+    },
+    fr: {
+      title: 'Étape 1 : Utiliser la relation fondamentale c² = a² + b² pour déduire b',
+      expl: `Relation fondamentale de l'hyperbole : c² = a² + b² ⇒ b² = c² - a² = ${formatFraction(bSq, 1)}.`,
+    },
+    pt: {
+      title: 'Passo 1: Utilizar a relação fundamental c² = a² + b² para calcular b',
+      expl: `Relação da hipérbole: c² = a² + b² ⇒ b² = c² - a² = ${formatFraction(bSq, 1)}.`,
+    },
+  };
+
+  const step2Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 2：代入标准方程',
+      expl: `焦点在 ${axis === 'x' ? 'x 轴' : 'y 轴'} 上，实轴为 ${axis === 'x' ? 'x' : 'y'} 项。`,
+    },
+    en: {
+      title: 'Step 2: Substitute into canonical standard form',
+      expl: `The focal axis is along the ${axis === 'x' ? 'x-axis' : 'y-axis'}, so the positive term corresponds to ${axis === 'x' ? 'x' : 'y'}.`,
+    },
+    es: {
+      title: 'Paso 2: Sustituir en la forma canónica',
+      expl: `Focos en el eje ${axis === 'x' ? 'x' : 'y'}.`,
+    },
+    fr: {
+      title: 'Étape 2 : Écrire la forme canonique réduite',
+      expl: `Foyers sur l'axe ${axis === 'x' ? 'x' : 'y'}.`,
+    },
+    pt: {
+      title: 'Passo 2: Substituir na equação reduzida padrão',
+      expl: `Focos no eixo ${axis === 'x' ? 'x' : 'y'}.`,
+    },
+  };
+
+  const step3Map: Record<Language, { title: string; expl: string }> = {
+    zh: {
+      title: '步骤 3：求解离心率与渐近线',
+      expl: `离心率 e > 1，渐近线斜率 k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}。`,
+    },
+    en: {
+      title: 'Step 3: Calculate eccentricity e and asymptote equations',
+      expl: `Eccentricity e = c/a > 1, asymptote slope k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}.`,
+    },
+    es: {
+      title: 'Paso 3: Calcular excentricidad e y ecuaciones de asíntotas',
+      expl: `Excentricidad e = c/a > 1, pendiente k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}.`,
+    },
+    fr: {
+      title: 'Étape 3 : Calculer l\'excentricité e et les asymptotes',
+      expl: `Excentricité e = c/a > 1, pente k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}.`,
+    },
+    pt: {
+      title: 'Passo 3: Calcular excentricidade e e assíntotas',
+      expl: `Excentricidade e = c/a > 1, inclinação k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}.`,
+    },
+  };
+
   const steps = [
     {
-      title: '步骤 1：利用双曲线特征恒等式求解虚半轴 b',
-      math: `b² = c² - a² = (${c})² - (${a})² = ${c * c} - ${a * a} = ${formatFraction(bSq, 1)} ⇒ b = ${simplifyRadical(bSq)}`,
-      explanation: `【双曲线核心恒等式】：c² = a² + b² ⇒ b² = c² - a²。计算得 b² = ${formatFraction(bSq, 1)}。`,
+      title: (step1Map[lang] || step1Map.en).title,
+      math: `b² = c² - a² = (${c})² - (${a})² = ${c * c} - ${a * a} = ${formatFraction(bSq, 1)} \\implies b = ${simplifyRadical(bSq)}`,
+      explanation: (step1Map[lang] || step1Map.en).expl,
     },
     {
-      title: '步骤 2：代入标准方程',
+      title: (step2Map[lang] || step2Map.en).title,
       math: axis === 'x'
         ? `\\frac{${formatBracketTerm('x', h)}²}{${formatFraction(a * a, 1)}} - \\frac{${formatBracketTerm('y', k)}²}{${formatFraction(bSq, 1)}} = 1`
         : `\\frac{${formatBracketTerm('y', k)}²}{${formatFraction(a * a, 1)}} - \\frac{${formatBracketTerm('x', h)}²}{${formatFraction(bSq, 1)}} = 1`,
-      explanation: `焦点在 ${axis === 'x' ? 'x 轴' : 'y 轴'} 上，实轴为 ${axis === 'x' ? 'x' : 'y'} 项。`,
+      explanation: (step2Map[lang] || step2Map.en).expl,
     },
     {
-      title: '步骤 3：求解离心率与渐近线',
-      math: `e = c/a = ${c}/${a} = ${formatFraction(c, a)} (≈ ${(c / a).toFixed(3)}) \\\\ Asymptotes: ${properties.asymptoteEquations.join(' , ')}`,
-      explanation: `离心率 e > 1，渐近线斜率 k = ± ${axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}。`,
+      title: (step3Map[lang] || step3Map.en).title,
+      math: `e = c/a = ${c}/${a} = ${formatFraction(c, a)} \\; (\\approx ${(c / a).toFixed(3)}) \\\\ \\text{Asymptotes: } ${properties.asymptoteEquations.join(' , ')}`,
+      explanation: (step3Map[lang] || step3Map.en).expl,
     },
   ];
 

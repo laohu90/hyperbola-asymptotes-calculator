@@ -60,9 +60,19 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
   const handleQuickParse = () => {
     setPasteError(null);
     setPasteSuccess(null);
-    if (!quickEqText.trim()) return;
+    if (!quickEqText.trim()) {
+      const emptyMsg: Record<Language, string> = {
+        zh: '请输入方程后再点击解析，例如：(x-2)²/9 - (y+1)²/4 = 1 或 x²/16 - y²/9 = 1',
+        en: 'Please enter an equation before parsing, e.g. (x-2)²/9 - (y+1)²/4 = 1 or x²/16 - y²/9 = 1',
+        es: 'Por favor ingrese una ecuación antes de analizar, ej. (x-2)²/9 - (y+1)²/4 = 1',
+        fr: 'Veuillez entrer une équation avant d\'analyser, ex. (x-2)²/9 - (y+1)²/4 = 1',
+        pt: 'Por favor insira uma equação antes de analisar, ex. (x-2)²/9 - (y+1)²/4 = 1',
+      };
+      setPasteError(emptyMsg[lang] || emptyMsg.en);
+      return;
+    }
 
-    const res = parseAnyEquation(quickEqText);
+    const res = parseAnyEquation(quickEqText, lang);
     if (!res.success) {
       setPasteError(res.error);
       return;

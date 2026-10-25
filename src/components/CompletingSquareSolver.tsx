@@ -203,7 +203,18 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
   const handleParseText = () => {
     setParseError(null);
     setParseNotice(null);
-    const res = parseAnyEquation(textInput);
+    if (!textInput.trim()) {
+      const emptyMsg: Record<Language, string> = {
+        zh: '请输入方程后再点击求解，例如：4x² - 9y² - 16x - 18y - 29 = 0 或 x²/9 - y²/16 = 1',
+        en: 'Please enter an equation before solving, e.g. 4x² - 9y² - 16x - 18y - 29 = 0 or x²/9 - y²/16 = 1',
+        es: 'Por favor ingrese una ecuación antes de resolver, ej. 4x² - 9y² - 16x - 18y - 29 = 0',
+        fr: 'Veuillez entrer une équation avant de résoudre, ex. 4x² - 9y² - 16x - 18y - 29 = 0',
+        pt: 'Por favor insira uma equação antes de resolver, ex. 4x² - 9y² - 16x - 18y - 29 = 0',
+      };
+      setParseError(emptyMsg[lang] || emptyMsg.en);
+      return;
+    }
+    const res = parseAnyEquation(textInput, lang);
     if (!res.success) {
       setParseError(res.error);
       return;
@@ -221,7 +232,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
     if (preset.coeffs) {
       setCoeffs(preset.coeffs);
     } else {
-      const res = parseAnyEquation(preset.equation);
+      const res = parseAnyEquation(preset.equation, lang);
       if (res.success) {
         setCoeffs(res.coeffs);
         if (res.description) setParseNotice(res.description);
@@ -451,7 +462,9 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-3 my-4">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-sm sm:text-base">Notice:</h4>
+              <h4 className="font-semibold text-sm sm:text-base">
+                {lang === 'zh' ? '提示：' : lang === 'es' ? 'Aviso:' : lang === 'fr' ? 'Avis :' : lang === 'pt' ? 'Aviso:' : 'Notice:'}
+              </h4>
               <p className="text-xs sm:text-sm mt-1 text-amber-800 leading-relaxed">{solution.message}</p>
             </div>
           </div>

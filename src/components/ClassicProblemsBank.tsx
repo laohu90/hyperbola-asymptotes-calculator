@@ -953,7 +953,7 @@ export const ClassicProblemsBank: React.FC<ClassicProblemsBankProps> = ({ t, lan
                       <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-950 flex items-start gap-2.5">
                         <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <div>
-                          <strong>{t.trapAlert}：</strong>
+                          <strong>{t.trapAlert}{lang === 'zh' ? '：' : ': '}</strong>
                           {problem.trapAlert}
                         </div>
                       </div>

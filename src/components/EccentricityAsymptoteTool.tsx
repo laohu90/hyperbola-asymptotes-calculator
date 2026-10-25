@@ -74,7 +74,8 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
     tool3A,
     tool3C,
     tool3H,
-    tool3K
+    tool3K,
+    lang
   );
 
   return (
@@ -529,7 +530,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs sm:text-sm flex items-start gap-2.5">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <strong>Notice:</strong>
+                <strong>{lang === 'zh' ? '提示：' : lang === 'es' ? 'Aviso:' : lang === 'fr' ? 'Avis :' : lang === 'pt' ? 'Aviso:' : 'Notice:'}</strong>
                 <p className="mt-1">{tool2Solution.message}</p>
               </div>
             </div>
@@ -662,7 +663,7 @@ export const EccentricityAsymptoteTool: React.FC<EccentricityAsymptoteToolProps>
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs sm:text-sm flex items-start gap-2.5">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
-                <strong>Notice:</strong>
+                <strong>{lang === 'zh' ? '提示：' : lang === 'es' ? 'Aviso:' : lang === 'fr' ? 'Avis :' : lang === 'pt' ? 'Aviso:' : 'Notice:'}</strong>
                 <p className="mt-1">{tool3Solution.message}</p>
               </div>
             </div>
