@@ -346,6 +346,20 @@ export function sanitizeEquationString(
     .replace(/[*×·]/g, '')
     .replace(/[\s\u3000]+/g, ''); // Whitespace & fullwidth space
 
+  if (/\/0(?:\.0+)?(?![0-9])/.test(str)) {
+    const zeroDivErrors: Record<Language, string> = {
+      zh: '检测到分母为 0（除以零未定义）！双曲线方程中分母 a² 与 b² 必须为严格大于 0 的正数。',
+      en: 'Detected division by zero (denominator is 0)! In hyperbola equations, denominators a² and b² must be strictly positive (> 0).',
+      es: '¡Se detectó división por cero (denominador 0 no definido)! a² y b² deben ser mayores que 0.',
+      fr: 'Division par zéro détectée (dénominateur nul non défini) ! Les dénominateurs a² et b² doivent être strictement positifs (> 0).',
+      pt: 'Divisão por zero detectada (denominador 0 indefinido)! Os denominadores a² e b² devem ser estritamente positivos (> 0).',
+    };
+    return {
+      clean: str,
+      error: zeroDivErrors[lang] || zeroDivErrors.en,
+    };
+  }
+
   if (/xy|yx/i.test(str)) {
     const xyErrors: Record<Language, string> = {
       zh: '检测到方程含 xy 交叉项（旋转双曲线）。本工具专注标准方向（对称轴平行于坐标轴）的双曲线，暂不支持斜向旋转双曲线。',
@@ -376,7 +390,20 @@ function tryParseStandardForm(str: string, lang: Language = 'en'): ParseEquation
 
   const [lhs, rhsStr] = str.split('=');
   const rhsVal = parseFloat(rhsStr);
-  if (isNaN(rhsVal) || rhsVal === 0) return null;
+  if (Math.abs(rhsVal) < 1e-9) {
+    const zeroRhsErrors: Record<Language, string> = {
+      zh: '等式右边为 0！该方程表示两条相交直线（退化为渐近线），而非双曲线。双曲线标准方程等式右边必须为 1。',
+      en: 'Right-hand side is 0! This equation represents two intersecting lines (asymptotes), not a hyperbola. Standard hyperbola equations require RHS = 1.',
+      es: '¡El lado derecho es 0! Representa dos rectas secantes (asíntotas), no una hipérbola.',
+      fr: 'Le membre de droite est 0 ! Cela représente deux droites sécantes (les asymptotes).',
+      pt: 'O segundo membro é 0! Representa duas retas concorrentes (as assíntotas).',
+    };
+    return {
+      success: false,
+      error: zeroRhsErrors[lang] || zeroRhsErrors.en,
+    };
+  }
+  if (isNaN(rhsVal)) return null;
 
   // Pattern to match terms: e.g. +(x-2)^2/9 or -(y+1)^2/4 or x^2/9 or -y^2
   let normalizedLhs = lhs;
@@ -400,7 +427,19 @@ function tryParseStandardForm(str: string, lang: Language = 'en'): ParseEquation
     const shift = m[3] ? parseFloat(m[3]) : 0;
     const denom = m[5] ? parseFloat(m[5]) : 1;
 
-    if (denom <= 0) return null;
+    if (denom <= 0) {
+      const invalidDenomErrors: Record<Language, string> = {
+        zh: '分母不能为 0 或负数！双曲线标准方程中分母 a² 与 b² 必须为严格大于 0 的正数。',
+        en: 'Denominators cannot be 0 or negative! In standard hyperbola form, denominators a² and b² must be strictly positive (> 0).',
+        es: '¡Los denominadores no pueden ser 0 o negativos!',
+        fr: 'Les dénominateurs ne peuvent pas être nuls ou négatifs !',
+        pt: 'Os denominadores não podem ser 0 ou negativos!',
+      };
+      return {
+        success: false,
+        error: invalidDenomErrors[lang] || invalidDenomErrors.en,
+      };
+    }
 
     if (varName === 'x') {
       xTerm = { sign, h: -shift, denom };

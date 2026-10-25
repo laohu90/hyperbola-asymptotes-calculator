@@ -410,8 +410,58 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           </div>
         </div>
 
-        {/* Action bar: 1-click copy exam response + print */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pt-3 border-t border-slate-100">
+        {parseError ? (
+          <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/70 text-center space-y-4 my-4">
+            <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="text-base sm:text-lg font-bold text-rose-950">
+                {lang === 'zh'
+                  ? '方程解析未通过 · 配方法步骤已冻结清空'
+                  : lang === 'es'
+                  ? 'Error de Ecuación · Pasos Anulados'
+                  : lang === 'fr'
+                  ? 'Équation invalide · Étapes annulées'
+                  : lang === 'pt'
+                  ? 'Equação inválida · Passos anulados'
+                  : 'Equation Parsing Failed · Solution Steps Inactive'}
+              </h3>
+              <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs sm:text-sm font-medium text-rose-800 text-left flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{parseError}</span>
+              </div>
+              <p className="text-xs text-rose-700 leading-relaxed pt-1">
+                {lang === 'zh'
+                  ? '【防误导安全保护】：为防止学生核对作业时误采纳上一题的旧数据，推导步骤与答题卡已停止输出旧题数据。请检查并修正方程后再查看。'
+                  : 'To prevent using stale answers, derivation steps and exam answers have been cleared.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setParseError(null);
+                  loadPreset(presets[0]);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold bg-white border border-rose-300 hover:bg-rose-100 text-rose-900 rounded-lg transition-colors cursor-pointer shadow-2xs"
+              >
+                {lang === 'zh' ? '加载有效预设例题' : 'Load Preset Example'}
+              </button>
+              <button
+                onClick={() => {
+                  setParseError(null);
+                  setTextInput('');
+                }}
+                className="px-3.5 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                {lang === 'zh' ? '清空重试' : 'Clear & Retry'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Action bar: 1-click copy exam response + print */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pt-3 border-t border-slate-100">
           <div className="flex items-center gap-2.5">
             <button
               onClick={handleCopyStandardAnswer}
@@ -606,6 +656,8 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

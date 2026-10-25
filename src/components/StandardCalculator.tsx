@@ -49,10 +49,14 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
   };
 
   const handleParamChange = (field: keyof HyperbolaStandardState, val: number) => {
+    setPasteError(null);
+    setPasteSuccess(null);
     onChange({ ...state, [field]: val });
   };
 
   const handleSquaredParamChange = (field: 'a' | 'b', valSq: number) => {
+    setPasteError(null);
+    setPasteSuccess(null);
     const positiveSq = Math.max(0.01, valSq);
     onChange({ ...state, [field]: Math.sqrt(positiveSq) });
   };
@@ -411,7 +415,64 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
 
           {/* Results Column */}
           <div className="lg:col-span-7 space-y-4">
-            {/* Equation Badge */}
+            {pasteError ? (
+              <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/70 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mx-auto">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div className="space-y-2 max-w-md mx-auto">
+                  <h3 className="text-base sm:text-lg font-bold text-rose-950">
+                    {lang === 'zh'
+                      ? '方程解析未通过 · 几何特征量已冻结失效'
+                      : lang === 'es'
+                      ? 'Error en la Ecuación · Resultados Anulados'
+                      : lang === 'fr'
+                      ? 'Équation invalide · Résultats invalidés'
+                      : lang === 'pt'
+                      ? 'Equação inválida · Resultados anulados'
+                      : 'Equation Parsing Failed · Results Invalidated'}
+                  </h3>
+                  <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs sm:text-sm font-medium text-rose-800 text-left flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>{pasteError}</span>
+                  </div>
+                  <p className="text-xs text-rose-700 leading-relaxed pt-1">
+                    {lang === 'zh'
+                      ? '【防误导安全保护】：为防止核对作业时误抄上一题的旧数据，结果区已清空失效。请根据上方提示修正方程后重新解析。'
+                      : lang === 'es'
+                      ? 'Para evitar confusiones con ejercicios anteriores, los resultados previos han sido anulados.'
+                      : lang === 'fr'
+                      ? 'Pour éviter les confusions avec les calculs précédents, les résultats ont été invalidés.'
+                      : lang === 'pt'
+                      ? 'Para evitar confusões com exercícios anteriores, os resultados foram anulados.'
+                      : 'To prevent using stale answers, previous calculation results have been cleared.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setPasteError(null);
+                      setQuickEqText('(x-2)²/16 - (y+1)²/9 = 1');
+                      onChange({ axis: 'x', h: 2, k: -1, a: 4, b: 3 });
+                    }}
+                    className="px-3.5 py-2 text-xs font-semibold bg-white border border-rose-300 hover:bg-rose-100 text-rose-900 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                  >
+                    {lang === 'zh' ? '加载有效示例方程 (a=4, b=3)' : 'Load Valid Example (a=4, b=3)'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPasteError(null);
+                      setQuickEqText('');
+                    }}
+                    className="px-3.5 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer shadow-xs"
+                  >
+                    {lang === 'zh' ? '清空重试' : 'Clear & Retry'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Equation Badge */}
             <div className="p-4.5 bg-slate-900 text-white rounded-xl shadow-xs">
               <div className="text-xs sm:text-sm text-slate-400 mb-1.5 flex items-center justify-between">
                 <span>{t.currentEquation}</span>
@@ -586,7 +647,9 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 )}
               </button>
             </div>
-          </div>
+          </>
+        )}
+      </div>
         </div>
       </div>
     </div>
