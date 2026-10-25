@@ -37,10 +37,13 @@ export interface HyperbolaProperties {
   vertices: [{ x: number; y: number }, { x: number; y: number }];
   foci: [{ x: number; y: number }, { x: number; y: number }];
   asymptoteSlopes: [number, number]; // e.g. +b/a and -b/a
-  asymptoteEquations: string[];
+  asymptoteEquations: string[]; // point-slope form: (y - k) = ± m (x - h)
+  asymptoteSlopeInterceptEquations: string[]; // slope-intercept: y = mx + b
+  asymptoteGeneralEquations: string[]; // general linear: Ax + By + C = 0
   directrixEquations?: string[];
   focalLatusRectum: number; // 2b^2 / a
-  asymptoteAngleDeg: number; // angle between asymptotes in degrees
+  asymptoteAngleDeg: number; // angle containing real axis in degrees (θ_real)
+  asymptoteAcuteAngleDeg: number; // acute intersection angle (θ_acute)
 }
 
 export interface QuizQuestion {

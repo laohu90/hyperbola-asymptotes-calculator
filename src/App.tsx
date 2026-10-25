@@ -268,7 +268,14 @@ export default function App() {
                 : 'Solve dual-solution traps when determining eccentricity from asymptote slope, and visualize angular aperture.'}
             </p>
           </div>
-          <EccentricityAsymptoteTool t={t.eccentricityTool} lang={currentLang} />
+          <EccentricityAsymptoteTool
+            t={t.eccentricityTool}
+            lang={currentLang}
+            onApplyToCanvas={(newState) => {
+              setStandardState(newState);
+              scrollToSection('calculator');
+            }}
+          />
         </section>
 
         {/* Section 4: Hyperbola vs Ellipse Anti-Confusion Comparison */}

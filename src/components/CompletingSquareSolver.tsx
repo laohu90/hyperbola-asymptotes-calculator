@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { GeneralEquationCoefficients, HyperbolaStandardState } from '../types/conic';
 import {
   solveCompletingSquare,
-  parseEquationText,
+  parseAnyEquation,
   generateExamPaperAnswer,
+  simplifyRadical,
+  formatFraction,
 } from '../utils/mathUtils';
 import { MathView } from './MathView';
 import {
@@ -16,6 +18,7 @@ import {
   Printer,
   ClipboardCheck,
   Wand2,
+  Info,
 } from 'lucide-react';
 import { Language, TranslationDictionary } from '../i18n/translations';
 
@@ -25,113 +28,141 @@ interface CompletingSquareSolverProps {
   lang: Language;
 }
 
-const PRESET_PROBLEMS: Record<Language, { label: string; equation: string; coeffs: GeneralEquationCoefficients }[]> = {
+const PRESET_PROBLEMS: Record<
+  Language,
+  { label: string; equation: string; isStandard?: boolean; coeffs?: GeneralEquationCoefficients }[]
+> = {
   en: [
     {
-      label: 'Exam Example 1 (x-axis)',
+      label: 'Standard Form 1 (x-axis)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Standard Shifted 2 (y-axis)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Exam General 3',
       equation: '4x² - 9y² - 16x - 18y - 29 = 0',
       coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
     },
     {
-      label: 'Exam Example 2 (y-axis)',
+      label: 'Vertical General 4',
       equation: '16y² - 9x² + 32y - 54x - 209 = 0',
       coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
     },
     {
-      label: 'Standard Shifted 3',
-      equation: 'x² - 4y² + 4x + 8y - 4 = 0',
-      coeffs: { A: 1, C: -4, D: 4, E: 8, F: -4 },
-    },
-    {
-      label: 'Classic Integer 4',
+      label: 'Classic Integer 5',
       equation: '9x² - 16y² - 36x + 64y - 172 = 0',
       coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
     },
   ],
   es: [
     {
-      label: 'Examen 1 (Eje x)',
+      label: 'Forma Canónica 1 (Eje x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Canónica Trasladada 2 (Eje y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Examen General 3',
       equation: '4x² - 9y² - 16x - 18y - 29 = 0',
       coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
     },
     {
-      label: 'Examen 2 (Eje y)',
+      label: 'Vertical General 4',
       equation: '16y² - 9x² + 32y - 54x - 209 = 0',
       coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
     },
     {
-      label: 'Desplazada 3',
-      equation: 'x² - 4y² + 4x + 8y - 4 = 0',
-      coeffs: { A: 1, C: -4, D: 4, E: 8, F: -4 },
-    },
-    {
-      label: 'Enteros 4',
+      label: 'Enteros 5',
       equation: '9x² - 16y² - 36x + 64y - 172 = 0',
       coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
     },
   ],
   fr: [
     {
-      label: 'Exemple 1 (Axe x)',
+      label: 'Forme Réduite 1 (Axe x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Forme Translatée 2 (Axe y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Exemple 3 (Générale)',
       equation: '4x² - 9y² - 16x - 18y - 29 = 0',
       coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
     },
     {
-      label: 'Exemple 2 (Axe y)',
+      label: 'Vertical 4 (Générale)',
       equation: '16y² - 9x² + 32y - 54x - 209 = 0',
       coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
     },
     {
-      label: 'Cas Translaté 3',
-      equation: 'x² - 4y² + 4x + 8y - 4 = 0',
-      coeffs: { A: 1, C: -4, D: 4, E: 8, F: -4 },
-    },
-    {
-      label: 'Coefficients 4',
+      label: 'Coefficients Entiers 5',
       equation: '9x² - 16y² - 36x + 64y - 172 = 0',
       coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
     },
   ],
   pt: [
     {
-      label: 'Vestibular 1 (Eixo x)',
+      label: 'Forma Reduzida 1 (Eixo x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Transladada 2 (Eixo y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      label: 'Vestibular 3 (Geral)',
       equation: '4x² - 9y² - 16x - 18y - 29 = 0',
       coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
     },
     {
-      label: 'Vestibular 2 (Eixo y)',
+      label: 'Vertical 4 (Geral)',
       equation: '16y² - 9x² + 32y - 54x - 209 = 0',
       coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
     },
     {
-      label: 'Transladada 3',
-      equation: 'x² - 4y² + 4x + 8y - 4 = 0',
-      coeffs: { A: 1, C: -4, D: 4, E: 8, F: -4 },
-    },
-    {
-      label: 'Inteiros 4',
+      label: 'Inteiros 5',
       equation: '9x² - 16y² - 36x + 64y - 172 = 0',
       coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
     },
   ],
   zh: [
     {
-      label: '高考典型 1 (焦点在x轴)',
+      label: '标准方程 1 (x轴简单型)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      label: '标准平移 2 (y轴平移型)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      label: '高考典型 3 (一般式焦点在x轴)',
       equation: '4x² - 9y² - 16x - 18y - 29 = 0',
       coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
     },
     {
-      label: '高考典型 2 (焦点在y轴)',
+      label: '高考典型 4 (一般式焦点在y轴)',
       equation: '16y² - 9x² + 32y - 54x - 209 = 0',
       coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
     },
     {
-      label: '经典考题 3 (含平移与特殊比值)',
-      equation: 'x² - 4y² + 4x + 8y - 4 = 0',
-      coeffs: { A: 1, C: -4, D: 4, E: 8, F: -4 },
-    },
-    {
-      label: '经典考题 4 (整除标准型)',
+      label: '经典整除 5 (9x² - 16y²)',
       equation: '9x² - 16y² - 36x + 64y - 172 = 0',
       coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
     },
@@ -152,6 +183,8 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
   });
 
   const [textInput, setTextInput] = useState<string>('4x² - 9y² - 16x - 18y - 29 = 0');
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseNotice, setParseNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [showExamTemplate, setShowExamTemplate] = useState<boolean>(false);
 
@@ -159,6 +192,8 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
 
   const handleInputChange = (field: keyof GeneralEquationCoefficients, value: string) => {
     const num = parseFloat(value);
+    setParseError(null);
+    setParseNotice(null);
     setCoeffs((prev) => ({
       ...prev,
       [field]: isNaN(num) ? 0 : num,
@@ -166,15 +201,32 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
   };
 
   const handleParseText = () => {
-    const parsed = parseEquationText(textInput);
-    if (parsed) {
-      setCoeffs(parsed);
+    setParseError(null);
+    setParseNotice(null);
+    const res = parseAnyEquation(textInput);
+    if (!res.success) {
+      setParseError(res.error);
+      return;
+    }
+    setCoeffs(res.coeffs);
+    if (res.isStandardForm && res.description) {
+      setParseNotice(res.description);
     }
   };
 
-  const loadPreset = (preset: { label: string; equation: string; coeffs: GeneralEquationCoefficients }) => {
-    setCoeffs(preset.coeffs);
+  const loadPreset = (preset: (typeof presets)[0]) => {
+    setParseError(null);
+    setParseNotice(null);
     setTextInput(preset.equation);
+    if (preset.coeffs) {
+      setCoeffs(preset.coeffs);
+    } else {
+      const res = parseAnyEquation(preset.equation);
+      if (res.success) {
+        setCoeffs(res.coeffs);
+        if (res.description) setParseNotice(res.description);
+      }
+    }
   };
 
   const solution = solveCompletingSquare(coeffs, lang);
@@ -200,7 +252,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               {t.title}
             </h2>
             <span className="text-xs px-2.5 py-0.5 rounded font-mono bg-blue-100 text-blue-800 font-semibold">
-              Ax² + Cy² + Dx + Ey + F = 0
+              Ax² + Cy² + Dx + Ey + F = 0 / Standard Form
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
@@ -214,7 +266,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
             <button
               key={idx}
               onClick={() => loadPreset(preset)}
-              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors whitespace-nowrap shadow-2xs"
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
             >
               {preset.label}
             </button>
@@ -223,7 +275,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
       </div>
 
       <div className="p-6">
-        {/* Natural Language Equation Paste Box */}
+        {/* Natural Language & Standard Form Equation Paste Box */}
         <div className="mb-6 p-4 bg-blue-50/40 rounded-xl border border-blue-200/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <label className="text-xs sm:text-sm font-bold text-blue-950 flex items-center gap-1.5">
@@ -231,14 +283,17 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               {t.pasteLabel}
             </label>
             <span className="text-xs text-blue-700 font-mono">
-              e.g. 4x² - 9y² - 16x - 18y = 29
+              支持: 4x² - 9y² - 16x - 18y = 29 或 (x-2)²/9 - (y+1)²/4 = 1
             </span>
           </div>
           <div className="flex gap-2">
             <input
               type="text"
               value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
+              onChange={(e) => {
+                setTextInput(e.target.value);
+                setParseError(null);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleParseText();
               }}
@@ -247,11 +302,31 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
             />
             <button
               onClick={handleParseText}
-              className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-xs"
+              className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-xs cursor-pointer"
             >
               {t.solveBtn}
             </button>
           </div>
+
+          {/* Real-time Parse Error Notification */}
+          {parseError && (
+            <div className="mt-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs sm:text-sm animate-in fade-in duration-150">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium leading-relaxed">
+                {parseError}
+              </div>
+            </div>
+          )}
+
+          {/* Standard Form Success Notice */}
+          {parseNotice && (
+            <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 text-xs sm:text-sm animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium leading-relaxed">
+                {parseNotice}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input Matrix */}
@@ -313,9 +388,9 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               <span className="text-slate-500">{t.currentEq}</span>
               <span className="font-mono text-slate-800 font-semibold">
                 {coeffs.A}x² {coeffs.C >= 0 ? `+ ${coeffs.C}` : `- ${Math.abs(coeffs.C)}`}y²{' '}
-                {coeffs.D >= 0 ? `+ ${coeffs.D}` : `- ${Math.abs(coeffs.D)}`}x{' '}
-                {coeffs.E >= 0 ? `+ ${coeffs.E}` : `- ${Math.abs(coeffs.E)}`}y{' '}
-                {coeffs.F >= 0 ? `+ ${coeffs.F}` : `- ${Math.abs(coeffs.F)}`} = 0
+                {coeffs.D !== 0 ? (coeffs.D > 0 ? `+ ${coeffs.D}x` : `- ${Math.abs(coeffs.D)}x`) : ''}{' '}
+                {coeffs.E !== 0 ? (coeffs.E > 0 ? `+ ${coeffs.E}y` : `- ${Math.abs(coeffs.E)}y`) : ''}{' '}
+                {coeffs.F !== 0 ? (coeffs.F > 0 ? `+ ${coeffs.F}` : `- ${Math.abs(coeffs.F)}`) : ''} = 0
               </span>
             </div>
             <span className="text-slate-500 font-medium">
@@ -329,7 +404,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           <div className="flex items-center gap-2.5">
             <button
               onClick={handleCopyStandardAnswer}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
               title="Copy Exam Paper Format"
             >
               {copied ? (
@@ -347,7 +422,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
 
             <button
               onClick={() => setShowExamTemplate(!showExamTemplate)}
-              className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 underline px-2 py-1"
+              className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 underline px-2 py-1 cursor-pointer"
             >
               {showExamTemplate ? t.hidePreview : t.togglePreview}
             </button>
@@ -356,7 +431,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               {t.printCard}
@@ -376,8 +451,8 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-3 my-4">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-sm sm:text-base">Warning / Avis:</h4>
-              <p className="text-xs sm:text-sm mt-1 text-amber-800">{solution.message}</p>
+              <h4 className="font-semibold text-sm sm:text-base">Warning / 提示:</h4>
+              <p className="text-xs sm:text-sm mt-1 text-amber-800 leading-relaxed">{solution.message}</p>
             </div>
           </div>
         )}
@@ -393,7 +468,7 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
               {solution.standardForm && (
                 <button
                   onClick={() => onApplyToCanvas(solution.standardForm!)}
-                  className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
                   {t.applyToCanvas}
@@ -457,32 +532,62 @@ export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
                     <span className="text-slate-500 block mb-0.5">{t.centerCoords}</span>
                     <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
-                      ({solution.properties.h}, {solution.properties.k})
+                      ({formatFraction(solution.properties.h, 1)}, {formatFraction(solution.properties.k, 1)})
                     </span>
                   </div>
                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
                     <span className="text-slate-500 block mb-0.5">{t.semiAxes}</span>
                     <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
-                      a = {solution.properties.a.toFixed(2)}, b = {solution.properties.b.toFixed(2)}
+                      a = {simplifyRadical(solution.properties.a * solution.properties.a)}, b = {simplifyRadical(solution.properties.b * solution.properties.b)}
                     </span>
                   </div>
                   <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
                     <span className="text-slate-500 block mb-0.5">{t.fociAndEccentricity}</span>
                     <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
-                      c = {solution.properties.c.toFixed(2)}, e = {solution.properties.eccentricity.toFixed(3)}
+                      c = {simplifyRadical(solution.properties.c * solution.properties.c)}, e = {solution.properties.eccentricity.toFixed(3)}
                     </span>
                   </div>
                 </div>
 
-                <div className="mt-3.5 bg-white p-3.5 rounded-lg border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm shadow-2xs">
-                  <div>
-                    <span className="text-slate-500">{t.asymptoteEquations}</span>
-                    <span className="font-mono font-bold text-red-600 ml-2">
-                      {solution.properties.asymptoteEquations.join(' ; ')}
+                {/* 3 Forms of Asymptote Equations + Detailed Angles */}
+                <div className="mt-3.5 bg-white p-4 rounded-lg border border-blue-100 space-y-2.5 text-xs sm:text-sm shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-800">
+                      {t.asymptoteEquations} (3 种标准表示形式)：
                     </span>
+                    <div className="text-xs text-slate-500 font-mono">
+                      实轴夹角 θ = {solution.properties.asymptoteAngleDeg.toFixed(1)}° ； 锐角 = {solution.properties.asymptoteAcuteAngleDeg.toFixed(1)}°
+                    </div>
                   </div>
-                  <div className="text-slate-500 font-mono">
-                    {t.asymptoteAngle} {solution.properties.asymptoteAngleDeg.toFixed(1)}°
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">① 点斜式 (Point-Slope)</span>
+                      <span className="font-mono font-bold text-blue-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteEquations.join(' ; ')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">② 斜截式 (Slope-Intercept)</span>
+                      <span className="font-mono font-bold text-emerald-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteSlopeInterceptEquations.join(' ; ')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">③ 一般式 (General Linear)</span>
+                      <span className="font-mono font-bold text-purple-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteGeneralEquations.join(' ; ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-slate-500 text-xs pt-1">
+                    <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span>
+                      渐近线夹角说明：此处 θ 为包含双曲线实轴（分支开口）所夹的顶角（θ = 2·arctan(b/a)）；两直线本身的最小相交锐角为 min(θ, 180° - θ)。
+                    </span>
                   </div>
                 </div>
               </div>

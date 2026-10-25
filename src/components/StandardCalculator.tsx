@@ -1,8 +1,24 @@
 import React, { useState } from 'react';
 import { FocalAxis, HyperbolaStandardState } from '../types/conic';
-import { calculateHyperbolaProperties, formatFraction, formatBracketTerm } from '../utils/mathUtils';
+import {
+  calculateHyperbolaProperties,
+  formatFraction,
+  formatBracketTerm,
+  simplifyRadical,
+  parseAnyEquation,
+} from '../utils/mathUtils';
 import { MathView } from './MathView';
-import { Sliders, Calculator, Zap, Copy, Check } from 'lucide-react';
+import {
+  Sliders,
+  Calculator,
+  Zap,
+  Copy,
+  Check,
+  Wand2,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+} from 'lucide-react';
 import { Language, TranslationDictionary } from '../i18n/translations';
 
 interface StandardCalculatorProps {
@@ -23,6 +39,11 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
   const [inputMode, setInputMode] = useState<'linear' | 'squared'>('linear');
   const [copiedResults, setCopiedResults] = useState(false);
 
+  // Quick standard equation paste input
+  const [quickEqText, setQuickEqText] = useState('');
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [pasteSuccess, setPasteSuccess] = useState<string | null>(null);
+
   const handleAxisChange = (newAxis: FocalAxis) => {
     onChange({ ...state, axis: newAxis });
   };
@@ -36,22 +57,58 @@ export const StandardCalculator: React.FC<StandardCalculatorProps> = ({
     onChange({ ...state, [field]: Math.sqrt(positiveSq) });
   };
 
-  const isEquilateral = Math.abs(a - b) < 0.05;
+  const handleQuickParse = () => {
+    setPasteError(null);
+    setPasteSuccess(null);
+    if (!quickEqText.trim()) return;
+
+    const res = parseAnyEquation(quickEqText);
+    if (!res.success) {
+      setPasteError(res.error);
+      return;
+    }
+
+    if (res.isStandardForm && res.standardState) {
+      onChange(res.standardState);
+      setPasteSuccess(res.description || '标准方程识别成功并已载入！');
+    } else {
+      // General form: solve completing square to get standard state
+      import('../utils/mathUtils').then(({ solveCompletingSquare }) => {
+        const sol = solveCompletingSquare(res.coeffs, lang);
+        if (sol.success && sol.standardForm) {
+          onChange(sol.standardForm);
+          setPasteSuccess(`一般方程已自动配方转换为标准型：a = ${sol.standardForm.a.toFixed(2)}, b = ${sol.standardForm.b.toFixed(2)}`);
+        } else {
+          setPasteError(sol.message || '方程无法转换为标准双曲线。');
+        }
+      });
+    }
+  };
 
   const handleCopySummary = () => {
     const isX = axis === 'x';
+    const aSqStr = formatFraction(a * a, 1);
+    const bSqStr = formatFraction(b * b, 1);
+    const cSqStr = formatFraction(a * a + b * b, 1);
+    const hStr = formatBracketTerm('x', h);
+    const kStr = formatBracketTerm('y', k);
+
     const eq = isX
-      ? `x²/${(a * a).toFixed(2)} - y²/${(b * b).toFixed(2)} = 1`
-      : `y²/${(a * a).toFixed(2)} - x²/${(b * b).toFixed(2)} = 1`;
+      ? `${hStr}²/${aSqStr} - ${kStr}²/${bSqStr} = 1`
+      : `${kStr}²/${aSqStr} - ${hStr}²/${bSqStr} = 1`;
 
     const summary = `【${t.title}】
 ${t.currentEquation}: ${eq}
-a = ${a.toFixed(2)} (${t.realAxisLength} ${(2 * a).toFixed(2)})
-b = ${b.toFixed(2)} (${t.imaginaryAxisLength} ${(2 * b).toFixed(2)})
-c = √(a² + b²) = ${properties.c.toFixed(2)}
-${t.eccentricityE}: e = ${properties.eccentricity.toFixed(4).replace(/\.?0+$/, '')}
-${t.asymptoteTitle}: ${properties.asymptoteEquations.join(' , ')}
-${t.angleTheta}: ${properties.asymptoteAngleDeg.toFixed(1)}°
+中心 (h, k): (${h}, ${k})
+实半轴 a = ${simplifyRadical(a * a)} (a² = ${aSqStr}, 实轴长 2a = ${formatFraction(2 * a, 1)})
+虚半轴 b = ${simplifyRadical(b * b)} (b² = ${bSqStr}, 虚轴长 2b = ${formatFraction(2 * b, 1)})
+半焦距 c = √(a² + b²) = ${simplifyRadical(a * a + b * b)} (c² = ${cSqStr})
+${t.eccentricityE}: e = c/a = ${properties.eccentricity.toFixed(4).replace(/\.?0+$/, '')}
+渐近线 (点斜式): ${properties.asymptoteEquations.join(' , ')}
+渐近线 (斜截式): ${properties.asymptoteSlopeInterceptEquations.join(' , ')}
+渐近线 (一般式): ${properties.asymptoteGeneralEquations.join(' , ')}
+实轴分支夹角 θ = ${properties.asymptoteAngleDeg.toFixed(1)}°
+两线相交锐角 = ${properties.asymptoteAcuteAngleDeg.toFixed(1)}°
 ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
 
     navigator.clipboard.writeText(summary);
@@ -74,7 +131,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
           <button
             onClick={() => handleAxisChange('x')}
-            className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
               axis === 'x'
                 ? 'bg-white text-blue-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -84,7 +141,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
           </button>
           <button
             onClick={() => handleAxisChange('y')}
-            className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors whitespace-nowrap ${
+            className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
               axis === 'y'
                 ? 'bg-white text-blue-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -96,6 +153,56 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
       </div>
 
       <div className="p-6">
+        {/* Quick Standard Equation Paste Bar */}
+        <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <label className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <Wand2 className="w-4 h-4 text-blue-600" />
+              快速粘贴/输入标准方程直接解析
+            </label>
+            <span className="text-xs text-slate-500 font-mono">
+              例如: (x-2)²/9 - (y+1)²/4 = 1 或 x²/16 - y²/9 = 1
+            </span>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={quickEqText}
+              onChange={(e) => {
+                setQuickEqText(e.target.value);
+                setPasteError(null);
+                setPasteSuccess(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleQuickParse();
+              }}
+              placeholder="直接粘贴标准方程，如 (x-1)²/25 - (y+2)²/16 = 1"
+              className="flex-1 px-3.5 py-2 text-xs sm:text-sm font-mono bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+            />
+            <button
+              onClick={handleQuickParse}
+              className="px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              一键解析载入
+            </button>
+          </div>
+
+          {pasteError && (
+            <div className="mt-2.5 p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{pasteError}</span>
+            </div>
+          )}
+
+          {pasteSuccess && (
+            <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-start gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{pasteSuccess}</span>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Controls Column */}
           <div className="lg:col-span-5 space-y-4">
@@ -107,7 +214,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-xs">
                 <button
                   onClick={() => setInputMode('linear')}
-                  className={`px-2.5 py-1 rounded transition-colors ${
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
                     inputMode === 'linear'
                       ? 'bg-white text-blue-700 font-semibold shadow-xs'
                       : 'text-slate-600'
@@ -117,7 +224,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 </button>
                 <button
                   onClick={() => setInputMode('squared')}
-                  className={`px-2.5 py-1 rounded transition-colors ${
+                  className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
                     inputMode === 'squared'
                       ? 'bg-white text-blue-700 font-semibold shadow-xs'
                       : 'text-slate-600'
@@ -178,9 +285,9 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
               />
               <div className="flex justify-between text-xs text-slate-500 font-mono mt-1.5">
-                <span>a² = {(a * a).toFixed(2)}</span>
-                <span>{t.realAxisLength} {(2 * a).toFixed(2)}</span>
-                <span>a = {a.toFixed(2)}</span>
+                <span>a² = {formatFraction(a * a, 1)}</span>
+                <span>{t.realAxisLength} {formatFraction(2 * a, 1)}</span>
+                <span>a = {simplifyRadical(a * a)}</span>
               </div>
             </div>
 
@@ -234,9 +341,9 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                 className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
               />
               <div className="flex justify-between text-xs text-slate-500 font-mono mt-1.5">
-                <span>b² = {(b * b).toFixed(2)}</span>
-                <span>{t.imaginaryAxisLength} {(2 * b).toFixed(2)}</span>
-                <span>b = {b.toFixed(2)}</span>
+                <span>b² = {formatFraction(b * b, 1)}</span>
+                <span>{t.imaginaryAxisLength} {formatFraction(2 * b, 1)}</span>
+                <span>b = {simplifyRadical(b * b)}</span>
               </div>
             </div>
 
@@ -273,19 +380,19 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => onChange({ ...state, a: 3, b: 4, h: 0, k: 0 })}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors"
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors cursor-pointer"
                 >
                   {t.presetPythagorean}
                 </button>
                 <button
                   onClick={() => onChange({ ...state, a: 2, b: 2, h: 0, k: 0 })}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors"
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors cursor-pointer"
                 >
                   {t.presetEquilateral}
                 </button>
                 <button
                   onClick={() => onChange({ ...state, a: 1, b: Math.sqrt(3), h: 0, k: 0 })}
-                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors"
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded font-mono text-slate-700 transition-colors cursor-pointer"
                 >
                   {t.presetAngle60}
                 </button>
@@ -300,7 +407,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="text-xs sm:text-sm text-slate-400 mb-1.5 flex items-center justify-between">
                 <span>{t.currentEquation}</span>
                 <span className="font-mono text-emerald-400 font-semibold">
-                  {axis === 'x' ? 'Transverse on x-axis' : 'Transverse on y-axis'}
+                  {axis === 'x' ? '焦点在水平方向 (x轴)' : '焦点在垂直方向 (y轴)'}
                 </span>
               </div>
               <div className="text-lg sm:text-xl font-mono text-center py-1.5">
@@ -330,34 +437,53 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               </div>
             </div>
 
-            {/* Asymptotes Card */}
-            <div className="p-4.5 bg-rose-50/70 border border-rose-200 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
+            {/* Asymptotes Card: 3 Full Forms */}
+            <div className="p-4.5 bg-rose-50/70 border border-rose-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
                 <span className="text-xs sm:text-sm font-bold text-rose-900 flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-rose-600" />
-                  {t.asymptoteTitle}
+                  {t.asymptoteTitle} (3 种完备表示)
                 </span>
                 <span className="text-xs font-mono text-rose-700 bg-white px-2.5 py-0.5 rounded border border-rose-200 font-semibold">
-                  k = ± {axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}
+                  斜率 k = ± {axis === 'x' ? formatFraction(b, a) : formatFraction(a, b)}
                 </span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-lg border border-rose-100 font-mono text-rose-700 text-center text-base sm:text-lg my-2 font-bold">
-                {properties.asymptoteEquations.join('　;　')}
+              {/* 3 Forms Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs sm:text-sm">
+                <div className="bg-white p-3 rounded-lg border border-rose-100">
+                  <span className="text-slate-500 block mb-1 text-xs">① 点斜式 (Point-Slope)</span>
+                  <div className="font-mono font-bold text-rose-700 leading-snug">
+                    {properties.asymptoteEquations.map((eq, i) => (
+                      <div key={i}>{eq}</div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-rose-100">
+                  <span className="text-slate-500 block mb-1 text-xs">② 斜截式 (Slope-Intercept)</span>
+                  <div className="font-mono font-bold text-rose-700 leading-snug">
+                    {properties.asymptoteSlopeInterceptEquations.map((eq, i) => (
+                      <div key={i}>{eq}</div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-rose-100">
+                  <span className="text-slate-500 block mb-1 text-xs">③ 一般式 (General Linear)</span>
+                  <div className="font-mono font-bold text-rose-700 leading-snug">
+                    {properties.asymptoteGeneralEquations.map((eq, i) => (
+                      <div key={i}>{eq}</div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="text-xs sm:text-sm text-rose-900 leading-relaxed space-y-1.5">
-                <p>
-                  <strong>{t.asymptoteTrickTitle}</strong> {t.asymptoteTrickDesc}
-                </p>
-                <div className="bg-rose-100/70 p-2.5 rounded font-mono text-xs sm:text-sm text-rose-950">
-                  {axis === 'x'
-                    ? `x²/a² - y²/b² = 0 ⇒ (x/a - y/b)(x/a + y/b) = 0 ⇒ y = ± (b/a)x`
-                    : `y²/a² - x²/b² = 0 ⇒ (y/a - x/b)(y/a + x/b) = 0 ⇒ y = ± (a/b)x`}
-                </div>
-                <p className="text-xs text-rose-700">
-                  {t.asymptoteNotice}
-                </p>
+              <div className="text-xs text-rose-900 leading-relaxed bg-rose-100/60 p-2.5 rounded-lg">
+                <strong>速算秘籍（令 1 为 0 法）：</strong> 将标准方程右边的常数 1 直接替换为 0，因式分解立刻得到渐近线方程：
+                <span className="font-mono font-semibold ml-1">
+                  {axis === 'x' ? '(x/a - y/b)(x/a + y/b) = 0' : '(y/a - x/b)(y/a + x/b) = 0'}
+                </span>
               </div>
             </div>
 
@@ -366,10 +492,10 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                 <span className="text-slate-500 block mb-1 text-xs">{t.focalDistanceC}</span>
                 <span className="font-mono font-bold text-slate-900 text-base">
-                  c = {properties.c.toFixed(2)}
+                  c = {simplifyRadical(a * a + b * b)} (≈ {properties.c.toFixed(2)})
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  c² = a²+b² = {(a * a + b * b).toFixed(2)}
+                  c² = a²+b² = {formatFraction(a * a + b * b, 1)}
                 </span>
               </div>
 
@@ -379,7 +505,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                   e = {properties.eccentricity.toFixed(3)}
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  e = c/a = √(1 + (b/a)²)
+                  e = c/a = √(1 + (b/a)²) &gt; 1
                 </span>
               </div>
 
@@ -389,38 +515,48 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
                   {properties.asymptoteAngleDeg.toFixed(1)}°
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  tan(θ/2) = {formatFraction(b, a)}
+                  锐角相交: {properties.asymptoteAcuteAngleDeg.toFixed(1)}°
                 </span>
               </div>
 
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                 <span className="text-slate-500 block mb-1 text-xs">{t.verticesLabel}</span>
                 <span className="font-mono text-slate-800 text-xs sm:text-sm block">
-                  A₁({properties.vertices[0].x.toFixed(1)}, {properties.vertices[0].y.toFixed(1)})
+                  A₁({formatFraction(properties.vertices[0].x, 1)}, {formatFraction(properties.vertices[0].y, 1)})
                 </span>
                 <span className="font-mono text-slate-800 text-xs sm:text-sm block">
-                  A₂({properties.vertices[1].x.toFixed(1)}, {properties.vertices[1].y.toFixed(1)})
+                  A₂({formatFraction(properties.vertices[1].x, 1)}, {formatFraction(properties.vertices[1].y, 1)})
                 </span>
               </div>
 
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                 <span className="text-slate-500 block mb-1 text-xs">{t.fociLabel}</span>
                 <span className="font-mono text-red-700 text-xs sm:text-sm block">
-                  F₁({properties.foci[0].x.toFixed(1)}, {properties.foci[0].y.toFixed(1)})
+                  F₁({formatFraction(properties.foci[0].x, 1)}, {formatFraction(properties.foci[0].y, 1)})
                 </span>
                 <span className="font-mono text-red-700 text-xs sm:text-sm block">
-                  F₂({properties.foci[1].x.toFixed(1)}, {properties.foci[1].y.toFixed(1)})
+                  F₂({formatFraction(properties.foci[1].x, 1)}, {formatFraction(properties.foci[1].y, 1)})
                 </span>
               </div>
 
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl">
                 <span className="text-slate-500 block mb-1 text-xs">{t.latusRectum}</span>
                 <span className="font-mono font-bold text-slate-900 text-base">
-                  {properties.focalLatusRectum.toFixed(2)}
+                  {formatFraction(2 * b * b, a)}
                 </span>
                 <span className="text-xs text-slate-400 block font-mono mt-0.5">
-                  2b²/a
+                  2b²/a ≈ {properties.focalLatusRectum.toFixed(2)}
                 </span>
+              </div>
+            </div>
+
+            {/* Quick Angle Clarification Alert */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2.5 text-xs text-slate-600 leading-relaxed">
+              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <strong>渐近线夹角定义说明：</strong>
+                此处 θ 为包含双曲线实轴（分支开口所夹）的顶角（横轴时 θ = 2·arctan(b/a) = {properties.asymptoteAngleDeg.toFixed(1)}°）；
+                两直线自身的最小相交锐角为 {properties.asymptoteAcuteAngleDeg.toFixed(1)}°。
               </div>
             </div>
 
@@ -428,7 +564,7 @@ ${t.latusRectum}: ${properties.focalLatusRectum.toFixed(2)}`;
             <div className="flex justify-end pt-1">
               <button
                 onClick={handleCopySummary}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors shadow-2xs cursor-pointer"
               >
                 {copiedResults ? (
                   <>
