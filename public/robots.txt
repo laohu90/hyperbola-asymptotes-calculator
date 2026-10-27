@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hyperbola-asymptotes-calculator.formulacalckit.com/sitemap.xml

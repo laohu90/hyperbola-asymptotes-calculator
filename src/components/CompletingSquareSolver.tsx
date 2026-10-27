@@ -1,0 +1,894 @@
+import React, { useState } from 'react';
+import { GeneralEquationCoefficients, HyperbolaStandardState } from '../types/conic';
+import {
+  solveCompletingSquare,
+  parseAnyEquation,
+  generateExamPaperAnswer,
+  simplifyRadical,
+  formatFraction,
+} from '../utils/mathUtils';
+import { MathView } from './MathView';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  BookOpen,
+  Sparkles,
+  ArrowRight,
+  Copy,
+  Printer,
+  ClipboardCheck,
+  Wand2,
+  Info,
+  Share2,
+  Check,
+  FileText,
+} from 'lucide-react';
+import { Language, TranslationDictionary } from '../i18n/translations';
+
+interface CompletingSquareSolverProps {
+  onApplyToCanvas: (state: HyperbolaStandardState) => void;
+  t: TranslationDictionary['completingSquare'];
+  lang: Language;
+}
+
+export type PresetCategory = 'all' | 'basic' | 'exam' | 'radicals' | 'decimals';
+
+export interface PresetProblemItem {
+  category: 'basic' | 'exam' | 'radicals' | 'decimals';
+  label: string;
+  equation: string;
+  isStandard?: boolean;
+  coeffs?: GeneralEquationCoefficients;
+}
+
+const PRESET_PROBLEMS: Record<Language, PresetProblemItem[]> = {
+  en: [
+    {
+      category: 'basic',
+      label: 'Standard 1 (x-axis)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Standard Shifted 2 (y-axis)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Classic Integer 3',
+      equation: '9x² - 16y² - 36x + 64y - 172 = 0',
+      coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
+    },
+    {
+      category: 'exam',
+      label: 'Exam General 4 (x-axis)',
+      equation: '4x² - 9y² - 16x - 18y - 29 = 0',
+      coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
+    },
+    {
+      category: 'exam',
+      label: 'Exam General 5 (y-axis)',
+      equation: '16y² - 9x² + 32y - 54x - 209 = 0',
+      coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
+    },
+    {
+      category: 'exam',
+      label: 'Offset Center 6 (-3, 2)',
+      equation: '5x² - 4y² + 30x + 16y + 49 = 0',
+      coeffs: { A: 5, C: -4, D: 30, E: 16, F: 49 },
+    },
+    {
+      category: 'radicals',
+      label: 'Radical Non-Integer 7 (a=√5, b=√3)',
+      equation: '3x² - 5y² - 12x + 20y - 23 = 0',
+      coeffs: { A: 3, C: -5, D: -12, E: 20, F: -23 },
+    },
+    {
+      category: 'radicals',
+      label: 'Odd Constant 8 (Fractional Denom)',
+      equation: '4x² - 12y² - 8x + 36y - 59 = 0',
+      coeffs: { A: 4, C: -12, D: -8, E: 36, F: -59 },
+    },
+    {
+      category: 'radicals',
+      label: 'Vertical Non-Integer 9 (7y² - 9x²)',
+      equation: '7y² - 9x² + 28y - 36x - 71 = 0',
+      coeffs: { A: -9, C: 7, D: -36, E: 28, F: -71 },
+    },
+    {
+      category: 'decimals',
+      label: 'Decimal Coefficients 10 (2.25x² - 4y²)',
+      equation: '2.25x² - 4y² - 9x + 16y - 31 = 0',
+      coeffs: { A: 2.25, C: -4, D: -9, E: 16, F: -31 },
+    },
+    {
+      category: 'decimals',
+      label: 'Physical Trajectory 11 (1.5x² - 2.5y²)',
+      equation: '1.5x² - 2.5y² - 6x + 10y - 14 = 0',
+      coeffs: { A: 1.5, C: -2.5, D: -6, E: 10, F: -14 },
+    },
+  ],
+  zh: [
+    {
+      category: 'basic',
+      label: '标准方程 1 (x轴基础型)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: '标准平移 2 (y轴平移型)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: '经典整除 3 (9x² - 16y²)',
+      equation: '9x² - 16y² - 36x + 64y - 172 = 0',
+      coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
+    },
+    {
+      category: 'exam',
+      label: '高考典型 4 (一般式焦点在x轴)',
+      equation: '4x² - 9y² - 16x - 18y - 29 = 0',
+      coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
+    },
+    {
+      category: 'exam',
+      label: '高考典型 5 (一般式焦点在y轴)',
+      equation: '16y² - 9x² + 32y - 54x - 209 = 0',
+      coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
+    },
+    {
+      category: 'exam',
+      label: '大中心偏移 6 (中心在(-3, 2))',
+      equation: '5x² - 4y² + 30x + 16y + 49 = 0',
+      coeffs: { A: 5, C: -4, D: 30, E: 16, F: 49 },
+    },
+    {
+      category: 'radicals',
+      label: '非整根进阶 7 (除不尽得 a=√5, b=√3)',
+      equation: '3x² - 5y² - 12x + 20y - 23 = 0',
+      coeffs: { A: 3, C: -5, D: -12, E: 20, F: -23 },
+    },
+    {
+      category: 'radicals',
+      label: '分数常数项 8 (右侧除以奇数)',
+      equation: '4x² - 12y² - 8x + 36y - 59 = 0',
+      coeffs: { A: 4, C: -12, D: -8, E: 36, F: -59 },
+    },
+    {
+      category: 'radicals',
+      label: '纵轴非整系数 9 (7y² - 9x²)',
+      equation: '7y² - 9x² + 28y - 36x - 71 = 0',
+      coeffs: { A: -9, C: 7, D: -36, E: 28, F: -71 },
+    },
+    {
+      category: 'decimals',
+      label: '小数系数 10 (含 2.25 与小数)',
+      equation: '2.25x² - 4y² - 9x + 16y - 31 = 0',
+      coeffs: { A: 2.25, C: -4, D: -9, E: 16, F: -31 },
+    },
+    {
+      category: 'decimals',
+      label: '物理轨道小数 11 (1.5x² - 2.5y²)',
+      equation: '1.5x² - 2.5y² - 6x + 10y - 14 = 0',
+      coeffs: { A: 1.5, C: -2.5, D: -6, E: 10, F: -14 },
+    },
+  ],
+  es: [
+    {
+      category: 'basic',
+      label: 'Canónica 1 (Eje x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Trasladada 2 (Eje y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Enteros 3',
+      equation: '9x² - 16y² - 36x + 64y - 172 = 0',
+      coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
+    },
+    {
+      category: 'exam',
+      label: 'Examen 4',
+      equation: '4x² - 9y² - 16x - 18y - 29 = 0',
+      coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
+    },
+    {
+      category: 'exam',
+      label: 'Vertical 5',
+      equation: '16y² - 9x² + 32y - 54x - 209 = 0',
+      coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
+    },
+    {
+      category: 'radicals',
+      label: 'Raíces 6 (a=√5)',
+      equation: '3x² - 5y² - 12x + 20y - 23 = 0',
+      coeffs: { A: 3, C: -5, D: -12, E: 20, F: -23 },
+    },
+    {
+      category: 'decimals',
+      label: 'Decimales 7 (2.25x²)',
+      equation: '2.25x² - 4y² - 9x + 16y - 31 = 0',
+      coeffs: { A: 2.25, C: -4, D: -9, E: 16, F: -31 },
+    },
+  ],
+  fr: [
+    {
+      category: 'basic',
+      label: 'Réduite 1 (Axe x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Translatée 2 (Axe y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Entiers 3',
+      equation: '9x² - 16y² - 36x + 64y - 172 = 0',
+      coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
+    },
+    {
+      category: 'exam',
+      label: 'Examen 4',
+      equation: '4x² - 9y² - 16x - 18y - 29 = 0',
+      coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
+    },
+    {
+      category: 'exam',
+      label: 'Vertical 5',
+      equation: '16y² - 9x² + 32y - 54x - 209 = 0',
+      coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
+    },
+    {
+      category: 'radicals',
+      label: 'Racines 6 (a=√5)',
+      equation: '3x² - 5y² - 12x + 20y - 23 = 0',
+      coeffs: { A: 3, C: -5, D: -12, E: 20, F: -23 },
+    },
+    {
+      category: 'decimals',
+      label: 'Décimaux 7 (2.25x²)',
+      equation: '2.25x² - 4y² - 9x + 16y - 31 = 0',
+      coeffs: { A: 2.25, C: -4, D: -9, E: 16, F: -31 },
+    },
+  ],
+  pt: [
+    {
+      category: 'basic',
+      label: 'Reduzida 1 (Eixo x)',
+      equation: 'x²/9 - y²/16 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Transladada 2 (Eixo y)',
+      equation: '(y-1)²/16 - (x+2)²/9 = 1',
+      isStandard: true,
+    },
+    {
+      category: 'basic',
+      label: 'Inteiros 3',
+      equation: '9x² - 16y² - 36x + 64y - 172 = 0',
+      coeffs: { A: 9, C: -16, D: -36, E: 64, F: -172 },
+    },
+    {
+      category: 'exam',
+      label: 'Vestibular 4',
+      equation: '4x² - 9y² - 16x - 18y - 29 = 0',
+      coeffs: { A: 4, C: -9, D: -16, E: -18, F: -29 },
+    },
+    {
+      category: 'exam',
+      label: 'Vertical 5',
+      equation: '16y² - 9x² + 32y - 54x - 209 = 0',
+      coeffs: { A: -9, C: 16, D: -54, E: 32, F: -209 },
+    },
+    {
+      category: 'radicals',
+      label: 'Raízes 6 (a=√5)',
+      equation: '3x² - 5y² - 12x + 20y - 23 = 0',
+      coeffs: { A: 3, C: -5, D: -12, E: 20, F: -23 },
+    },
+    {
+      category: 'decimals',
+      label: 'Decimais 7 (2.25x²)',
+      equation: '2.25x² - 4y² - 9x + 16y - 31 = 0',
+      coeffs: { A: 2.25, C: -4, D: -9, E: 16, F: -31 },
+    },
+  ],
+};
+
+export const CompletingSquareSolver: React.FC<CompletingSquareSolverProps> = ({
+  onApplyToCanvas,
+  t,
+  lang,
+}) => {
+  const [coeffs, setCoeffs] = useState<GeneralEquationCoefficients>({
+    A: 4,
+    C: -9,
+    D: -16,
+    E: -18,
+    F: -29,
+  });
+
+  const [textInput, setTextInput] = useState<string>('4x² - 9y² - 16x - 18y - 29 = 0');
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseNotice, setParseNotice] = useState<string | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+  const [showExamTemplate, setShowExamTemplate] = useState<boolean>(false);
+  const [activeCategory, setActiveCategory] = useState<PresetCategory>('all');
+
+  const allPresets = PRESET_PROBLEMS[lang] || PRESET_PROBLEMS.en;
+  const filteredPresets = activeCategory === 'all'
+    ? allPresets
+    : allPresets.filter((p) => p.category === activeCategory);
+
+  const handleInputChange = (field: keyof GeneralEquationCoefficients, value: string) => {
+    const num = parseFloat(value);
+    setParseError(null);
+    setParseNotice(null);
+    setCoeffs((prev) => ({
+      ...prev,
+      [field]: isNaN(num) ? 0 : num,
+    }));
+  };
+
+  const handleTextInputChange = (raw: string) => {
+    // Automatically convert ^2 to ² and ^3 to ³ in real time!
+    const converted = raw.replace(/\^2/g, '²').replace(/\^3/g, '³');
+    setTextInput(converted);
+    setParseError(null);
+  };
+
+  const handleInsertSymbol = (sym: string) => {
+    setTextInput((prev) => prev + sym);
+    setParseError(null);
+  };
+
+  const handleShareEquation = () => {
+    const url = new URL(window.location.href);
+    url.hash = `tab=completing-square&eq=${encodeURIComponent(textInput)}&lang=${lang}`;
+    navigator.clipboard.writeText(url.toString());
+    setShareToast(t.copiedLatex || (lang === 'zh' ? '已复制本题专属分享链接！' : 'Equation share link copied!'));
+    setTimeout(() => setShareToast(null), 2500);
+  };
+
+  const handleParseText = () => {
+    setParseError(null);
+    setParseNotice(null);
+    if (!textInput.trim()) {
+      const emptyMsg: Record<Language, string> = {
+        zh: '请输入方程后再点击求解，例如：4x² - 9y² - 16x - 18y - 29 = 0 或 x²/9 - y²/16 = 1',
+        en: 'Please enter an equation before solving, e.g. 4x² - 9y² - 16x - 18y - 29 = 0 or x²/9 - y²/16 = 1',
+        es: 'Por favor ingrese una ecuación antes de resolver, ej. 4x² - 9y² - 16x - 18y - 29 = 0',
+        fr: 'Veuillez entrer une équation avant de résoudre, ex. 4x² - 9y² - 16x - 18y - 29 = 0',
+        pt: 'Por favor insira uma equação antes de resolver, ex. 4x² - 9y² - 16x - 18y - 29 = 0',
+      };
+      setParseError(emptyMsg[lang] || emptyMsg.en);
+      return;
+    }
+    const res = parseAnyEquation(textInput, lang);
+    if (!res.success) {
+      setParseError(res.error);
+      return;
+    }
+    setCoeffs(res.coeffs);
+    if (res.isStandardForm && res.description) {
+      setParseNotice(res.description);
+    }
+  };
+
+  const loadPreset = (preset: (typeof presets)[0]) => {
+    setParseError(null);
+    setParseNotice(null);
+    setTextInput(preset.equation);
+    if (preset.coeffs) {
+      setCoeffs(preset.coeffs);
+    } else {
+      const res = parseAnyEquation(preset.equation, lang);
+      if (res.success) {
+        setCoeffs(res.coeffs);
+        if (res.description) setParseNotice(res.description);
+      }
+    }
+  };
+
+  const solution = solveCompletingSquare(coeffs, lang);
+
+  const handleCopyStandardAnswer = () => {
+    const text = generateExamPaperAnswer(coeffs, lang);
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2200);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      {/* Toast Notification */}
+      {shareToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-in fade-in duration-200">
+          <Check className="w-4 h-4 text-white" />
+          <span>{shareToast}</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                {t.title}
+              </h2>
+              <span className="text-xs px-2.5 py-0.5 rounded font-mono bg-blue-100 text-blue-800 font-semibold">
+                Ax² + Cy² + Dx + Ey + F = 0
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
+              {t.subtitle}
+            </p>
+          </div>
+
+          <button
+            onClick={handleShareEquation}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>{t.shareLink || (lang === 'zh' ? '分享本题链接' : 'Share Equation')}</span>
+          </button>
+        </div>
+
+        {/* Preset Category Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/80">
+          <span className="text-xs font-bold text-slate-500 mr-2">
+            {lang === 'zh' ? '预设题库分类：' : 'Preset Categories:'}
+          </span>
+          {[
+            { id: 'all', label: t.categoryAll || (lang === 'zh' ? '全部预设' : 'All') },
+            { id: 'basic', label: t.categoryBasic || (lang === 'zh' ? '基础入门' : 'Basic') },
+            { id: 'exam', label: t.categoryExam || (lang === 'zh' ? '高考真题' : 'Exam') },
+            { id: 'radicals', label: t.categoryRadicals || (lang === 'zh' ? '进阶根号' : 'Radicals') },
+            { id: 'decimals', label: t.categoryDecimals || (lang === 'zh' ? '小数系数' : 'Decimals') },
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id as PresetCategory)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                activeCategory === cat.id
+                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Preset quick buttons */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {filteredPresets.map((preset, idx) => (
+            <button
+              key={idx}
+              onClick={() => loadPreset(preset)}
+              className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-6">
+        {/* Natural Language & Standard Form Equation Paste Box */}
+        <div className="mb-6 p-4 bg-blue-50/40 rounded-xl border border-blue-200/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <label className="text-xs sm:text-sm font-bold text-blue-950 flex items-center gap-1.5">
+              <Wand2 className="w-4 h-4 text-blue-600" />
+              {t.pasteLabel}
+            </label>
+            <span className="text-xs text-blue-700 font-mono">
+              {t.pasteHelpTip}
+            </span>
+          </div>
+
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => handleTextInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleParseText();
+              }}
+              placeholder={t.pastePlaceholder}
+              className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm font-mono bg-white border border-blue-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+            />
+            <button
+              onClick={handleParseText}
+              className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shrink-0 shadow-xs cursor-pointer"
+            >
+              {t.solveBtn}
+            </button>
+          </div>
+
+          {/* Quick Math Symbols Bar for easy typing */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+            <span className="font-medium text-slate-500 mr-1">
+              {t.quickSymbols || (lang === 'zh' ? '快捷输入符号:' : 'Quick symbols:')}
+            </span>
+            {['²', '³', '(', ')', '/', '=', '+', '-', 'x', 'y'].map((sym) => (
+              <button
+                key={sym}
+                onClick={() => handleInsertSymbol(sym)}
+                className="px-2.5 py-1 bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-700 rounded font-mono shadow-2xs transition-colors cursor-pointer"
+              >
+                {sym}
+              </button>
+            ))}
+            <span className="text-slate-400 text-2xs ml-2">
+              {lang === 'zh' ? '💡 提示：输入 ^2 会自动转换为 ²' : '💡 Tip: Typing ^2 automatically converts to ²'}
+            </span>
+          </div>
+
+          {/* Real-time Parse Error Notification */}
+          {parseError && (
+            <div className="mt-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs sm:text-sm animate-in fade-in duration-150">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium leading-relaxed whitespace-pre-line">
+                {parseError}
+              </div>
+            </div>
+          )}
+
+          {/* Standard Form Success Notice */}
+          {parseNotice && (
+            <div className="mt-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 text-xs sm:text-sm animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium leading-relaxed">
+                {parseNotice}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input Matrix */}
+        <div className="mb-6">
+          <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2.5 tracking-wide">
+            {t.manualLabel}
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div>
+              <span className="text-xs font-mono text-slate-500 block mb-1">A (x²)</span>
+              <input
+                type="number"
+                value={coeffs.A}
+                onChange={(e) => handleInputChange('A', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm sm:text-base font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <span className="text-xs font-mono text-slate-500 block mb-1">C (y²)</span>
+              <input
+                type="number"
+                value={coeffs.C}
+                onChange={(e) => handleInputChange('C', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm sm:text-base font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <span className="text-xs font-mono text-slate-500 block mb-1">D (x)</span>
+              <input
+                type="number"
+                value={coeffs.D}
+                onChange={(e) => handleInputChange('D', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm sm:text-base font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <span className="text-xs font-mono text-slate-500 block mb-1">E (y)</span>
+              <input
+                type="number"
+                value={coeffs.E}
+                onChange={(e) => handleInputChange('E', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm sm:text-base font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <span className="text-xs font-mono text-slate-500 block mb-1">F (const)</span>
+              <input
+                type="number"
+                value={coeffs.F}
+                onChange={(e) => handleInputChange('F', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm sm:text-base font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Current equation readout */}
+          <div className="mt-3 px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs sm:text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">{t.currentEq}</span>
+              <span className="font-mono text-slate-800 font-semibold">
+                {coeffs.A}x² {coeffs.C >= 0 ? `+ ${coeffs.C}` : `- ${Math.abs(coeffs.C)}`}y²{' '}
+                {coeffs.D !== 0 ? (coeffs.D > 0 ? `+ ${coeffs.D}x` : `- ${Math.abs(coeffs.D)}x`) : ''}{' '}
+                {coeffs.E !== 0 ? (coeffs.E > 0 ? `+ ${coeffs.E}y` : `- ${Math.abs(coeffs.E)}y`) : ''}{' '}
+                {coeffs.F !== 0 ? (coeffs.F > 0 ? `+ ${coeffs.F}` : `- ${Math.abs(coeffs.F)}`) : ''} = 0
+              </span>
+            </div>
+            <span className="text-slate-500 font-medium">
+              {coeffs.A * coeffs.C < 0 ? t.isHyperbola : t.notHyperbola}
+            </span>
+          </div>
+        </div>
+
+        {parseError ? (
+          <div className="p-6 sm:p-8 rounded-2xl border-2 border-dashed border-rose-300 bg-rose-50/70 text-center space-y-4 my-4">
+            <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="text-base sm:text-lg font-bold text-rose-950">
+                {lang === 'zh'
+                  ? '方程解析未通过 · 配方法步骤已冻结清空'
+                  : lang === 'es'
+                  ? 'Error de Ecuación · Pasos Anulados'
+                  : lang === 'fr'
+                  ? 'Équation invalide · Étapes annulées'
+                  : lang === 'pt'
+                  ? 'Equação inválida · Passos anulados'
+                  : 'Equation Parsing Failed · Solution Steps Inactive'}
+              </h3>
+              <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs sm:text-sm font-medium text-rose-800 text-left flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{parseError}</span>
+              </div>
+              <p className="text-xs text-rose-700 leading-relaxed pt-1">
+                {lang === 'zh'
+                  ? '【防误导安全保护】：为防止学生核对作业时误采纳上一题的旧数据，推导步骤与答题卡已停止输出旧题数据。请检查并修正方程后再查看。'
+                  : 'To prevent using stale answers, derivation steps and exam answers have been cleared.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => {
+                  setParseError(null);
+                  loadPreset(presets[0]);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold bg-white border border-rose-300 hover:bg-rose-100 text-rose-900 rounded-lg transition-colors cursor-pointer shadow-2xs"
+              >
+                {lang === 'zh' ? '加载有效预设例题' : 'Load Preset Example'}
+              </button>
+              <button
+                onClick={() => {
+                  setParseError(null);
+                  setTextInput('');
+                }}
+                className="px-3.5 py-2 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                {lang === 'zh' ? '清空重试' : 'Clear & Retry'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Action bar: 1-click copy exam response + print */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleCopyStandardAnswer}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              title="Copy Exam Paper Format"
+            >
+              {copied ? (
+                <>
+                  <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                  <span className="text-emerald-700 font-bold">{t.copiedExam}</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 text-slate-600" />
+                  <span>{t.copyExamFormat}</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => setShowExamTemplate(!showExamTemplate)}
+              className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 underline px-2 py-1 cursor-pointer"
+            >
+              {showExamTemplate ? t.hidePreview : t.togglePreview}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              {t.printCard}
+            </button>
+          </div>
+        </div>
+
+        {/* Optional Exam Template Preview */}
+        {showExamTemplate && (
+          <div className="p-4.5 mb-5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-800 whitespace-pre-wrap leading-relaxed shadow-inner">
+            {generateExamPaperAnswer(coeffs, lang)}
+          </div>
+        )}
+
+        {/* Error or Warning if not valid hyperbola */}
+        {!solution.success && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-3 my-4">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-sm sm:text-base">
+                {lang === 'zh' ? '提示：' : lang === 'es' ? 'Aviso:' : lang === 'fr' ? 'Avis :' : lang === 'pt' ? 'Aviso:' : 'Notice:'}
+              </h4>
+              <p className="text-xs sm:text-sm mt-1 text-amber-800 leading-relaxed">{solution.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Detailed Steps Container */}
+        {solution.success && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-blue-600" />
+                {t.stepByStepTitle}
+              </h3>
+              {solution.standardForm && (
+                <button
+                  onClick={() => onApplyToCanvas(solution.standardForm!)}
+                  className="inline-flex items-center gap-1 text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {t.applyToCanvas}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3.5">
+              {solution.steps.map((step, idx) => (
+                <div
+                  key={idx}
+                  className="p-4.5 rounded-xl border border-slate-200 bg-white hover:border-blue-300 transition-colors shadow-2xs"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                      {step.title}
+                    </span>
+                    <span className="text-xs font-mono text-slate-400 shrink-0">
+                      {t.stepWord} {idx + 1}
+                    </span>
+                  </div>
+
+                  {/* Math line */}
+                  <div className="bg-slate-50 px-3.5 py-3 rounded-lg border border-slate-100 font-mono text-sm sm:text-base text-blue-900 overflow-x-auto my-2.5">
+                    <MathView formula={step.math} />
+                  </div>
+
+                  {/* Plain explanation */}
+                  <div className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line mt-1.5">
+                    {step.explanation}
+                  </div>
+
+                  {/* Highlight warning/tip */}
+                  {step.highlight && (
+                    <div className="mt-2.5 text-xs sm:text-sm font-medium text-amber-850 bg-amber-50/70 border border-amber-100 px-3 py-2 rounded-lg">
+                      💡 {t.coreTip} {step.highlight}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Resolved Key Properties Summary Bar */}
+            {solution.properties && (
+              <div className="mt-6 p-5 bg-blue-50/60 rounded-xl border border-blue-200">
+                <div className="flex items-center gap-2 mb-3.5">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                  <h4 className="text-sm sm:text-base font-bold text-blue-950">
+                    {t.summaryTitle}
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
+                  <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-500 block mb-0.5">{t.focalAxisDirection}</span>
+                    <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
+                      {solution.properties.axis === 'x' ? 'x-axis Transverse' : 'y-axis Transverse'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-500 block mb-0.5">{t.centerCoords}</span>
+                    <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
+                      ({formatFraction(solution.properties.h, 1)}, {formatFraction(solution.properties.k, 1)})
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-500 block mb-0.5">{t.semiAxes}</span>
+                    <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
+                      a = {simplifyRadical(solution.properties.a * solution.properties.a)}, b = {simplifyRadical(solution.properties.b * solution.properties.b)}
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-slate-500 block mb-0.5">{t.fociAndEccentricity}</span>
+                    <span className="font-semibold text-slate-900 font-mono text-sm sm:text-base">
+                      c = {simplifyRadical(solution.properties.c * solution.properties.c)}, e = {solution.properties.eccentricity.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3 Forms of Asymptote Equations + Detailed Angles */}
+                <div className="mt-3.5 bg-white p-4 rounded-lg border border-blue-100 space-y-2.5 text-xs sm:text-sm shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-100 pb-2">
+                    <span className="font-bold text-slate-800">
+                      {t.threeAsymptoteForms}
+                    </span>
+                    <div className="text-xs text-slate-500 font-mono">
+                      θ = {solution.properties.asymptoteAngleDeg.toFixed(1)}° ; min = {solution.properties.asymptoteAcuteAngleDeg.toFixed(1)}°
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">{t.pointSlopeForm}</span>
+                      <span className="font-mono font-bold text-blue-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteEquations.join(' ; ')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">{t.slopeInterceptForm}</span>
+                      <span className="font-mono font-bold text-emerald-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteSlopeInterceptEquations.join(' ; ')}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-slate-500 block mb-1 text-xs">{t.generalLinearForm}</span>
+                      <span className="font-mono font-bold text-purple-700 text-xs sm:text-sm block">
+                        {solution.properties.asymptoteGeneralEquations.join(' ; ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-slate-500 text-xs pt-1">
+                    <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span>
+                      {t.angleDefinitionNote}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
