@@ -7,7 +7,7 @@ interface ComparisonMatrixProps {
   lang: Language;
 }
 
-export const ComparisonMatrix: React.FC<ComparisonMatrixProps> = ({ t }) => {
+export const ComparisonMatrix: React.FC<ComparisonMatrixProps> = ({ t, lang }) => {
   return (
     <div className="space-y-6">
       {/* Intro Hook Banner */}
