@@ -398,6 +398,11 @@ export function sanitizeEquationString(
     return { clean: '', error: highPowerErrors[lang] || highPowerErrors.en };
   }
 
+  // 5. Normalize powers: x^2 => x^2, x² => x^2, sqrt(x) => √x
+  str = str.replace(/([xy])\s*\^?\s*2/gi, '$1^2');
+  str = str.replace(/([xy])\s*²/gi, '$1^2');
+  str = str.replace(/\\sqrt\s*\{([^{}]+)\}/gi, 'sqrt($1)');
+
   // 6. Normalize Unicode dashes, superscripts, fullwidth characters, and operator signs
   str = str
     .replace(/[\u2212\u2013\u2014\uFF0D\uFE63]/g, '-') // Unicode minus / dashes
